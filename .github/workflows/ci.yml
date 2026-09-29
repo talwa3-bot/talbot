@@ -1,0 +1,27 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: ledger_owner, POSTGRES_PASSWORD: owner_dev, POSTGRES_DB: ledgerlens }
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      ADMIN_DATABASE_URL: postgres://ledger_owner:owner_dev@localhost:5432/ledgerlens
+      DATABASE_URL: postgres://ledger_app:ledger_app_dev@localhost:5432/ledgerlens
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run db:migrate
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run db:seed && (npm start &) && sleep 5 && CHROMIUM_PATH= npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: screenshots, path: docs/screenshots }

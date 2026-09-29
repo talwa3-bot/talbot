@@ -22,7 +22,8 @@ async function axe(page: Page, name: string) {
   check(serious.length === 0, `axe ${name}: ${serious.map((v) => v.id).join(",") || "no serious violations"}`);
 }
 
-const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/opt/pw-browsers/chromium" }).catch(() => chromium.launch());
+const exe = process.env.CHROMIUM_PATH ?? "/opt/pw-browsers/chromium";
+const browser = exe ? await chromium.launch({ executablePath: exe }).catch(() => chromium.launch()) : await chromium.launch();
 const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
 page.on("pageerror", (e) => failures.push(`page error: ${e.message}`));
 

@@ -17,7 +17,7 @@ beforeAll(async () => {
   await seed(ADMIN, APP);
   db = Db.connect(APP); svc = new LedgerLens(db); own = new pg.Pool({ connectionString: ADMIN });
   for (const s of ["cfo", "controller", "fpa", "accountant", "mgr-sales", "admin", "other-cfo"]) P[s] = await svc.principalFor(s);
-});
+}, 60_000);
 afterAll(async () => { await db.close(); await own.end(); });
 
 describe("golden SQL oracle vs API", () => {

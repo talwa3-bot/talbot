@@ -13,3 +13,10 @@ Owner for accounting, access and privacy decisions is an authorized human. AI re
 | D7 | Scenario lever scope | open | FP&A | Future months only |
 | D8 | Model provider | open | Security | Mock provider, offline |
 | D9 | Localization | decided | Product | Stable canonical IDs, labels per locale |
+
+## Choices made during the build (defaults, reversible)
+
+- UI default language Hebrew; per-user locale stored; switch at any time.
+- Model: offline template wording by default; Claude optional via env. Numbers never come from the model.
+- Base currency USD for the demo tenant; mixed currency answers are refused until D3 is decided.
+- Accounting basis (cash vs accrual) not assumed; demo data is labeled synthetic.

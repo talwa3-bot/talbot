@@ -8,7 +8,12 @@
   ],
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "start": "LEDGERLENS_DEMO_AUTH=1 tsx packages/api/src/server.ts",
+    "mcp": "tsx packages/mcp/src/server.ts",
+    "e2e": "tsx tests/e2e/flow.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
