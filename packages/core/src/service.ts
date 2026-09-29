@@ -89,7 +89,9 @@ export class LedgerLens {
     await this.requireRole(p, "create_import", ["admin"]);
     const isXlsx = input.encoding === "base64";
     const buf = isXlsx ? Buffer.from(input.content, "base64") : Buffer.from(input.content, "utf8");
-    const table = isXlsx ? await readXlsx(buf) : readCsv(input.content);
+    let table;
+    try { table = isXlsx ? await readXlsx(buf) : readCsv(input.content); }
+    catch (e) { throw new LedgerError("VALIDATION_FAILED", `The file could not be read: ${(e as Error).message}. Check that values containing commas are wrapped in quotes.`); }
     const suggested = suggestMapping(table.headers);
     const mapping = input.mapping ?? suggested.mapping;
     const missing = REQUIRED.filter((f) => !mapping[f] || !table.headers.includes(mapping[f]!));
@@ -100,7 +102,7 @@ export class LedgerLens {
     const rows = table.rows.map((raw) => {
       const m = applyMapping(raw, mapping);
       let amount: bigint | string;
-      try { amount = parseAmountMinor(m.amount ?? ""); } catch { amount = `invalid:${m.amount}`; }
+      try { amount = parseAmountMinor(m.amount ?? ""); } catch { amount = `invalid:${m.amount ?? ""}`; }
       return { source_row_id: m.source_row_id, period: m.period, entity_id: m.entity_id, department: m.department, account: m.account, currency: m.currency?.toUpperCase(), amount_minor: amount };
     });
     const content_sha256 = sha256(buf);
@@ -110,7 +112,7 @@ export class LedgerLens {
       if (dup.rows[0]) return { status: dup.rows[0].status, import_id: dup.rows[0].import_id, errors: dup.rows[0].errors, duplicate_of_existing_import: true };
       const accounts = (await c.query("SELECT code FROM accounts")).rows.map((r) => r.code);
       const departments = (await c.query("SELECT code FROM departments")).rows.map((r) => r.code);
-      const periods = [...new Set(rows.map((r) => r.period).filter((x): x is string => !!x))].sort();
+      const periods = [...new Set(rows.map((r) => r.period).filter((x): x is string => !!x && /^\d{4}-(0[1-9]|1[0-2])$/.test(x)))].sort();
       const v = validateActuals(rows as never, {
         accounts, departments, currency: await this.baseCurrency(c),
         expectedPeriods: input.expected_periods ?? periods, controlTotalMinor: controlTotal,

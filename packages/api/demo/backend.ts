@@ -72,7 +72,9 @@ function dimensions(p: P) {
 function createImport(p: P, input: any) {
   requireRole(p, "create_import", ["admin"]);
   if (input.encoding === "base64") throw new LedgerError("VALIDATION_FAILED", "The online demo accepts CSV only. Excel works in the full system.");
-  const table = readCsv(input.content);
+  let table;
+  try { table = readCsv(input.content); }
+  catch (e) { throw new LedgerError("VALIDATION_FAILED", `The file could not be read: ${(e as Error).message}. Check that values containing commas are wrapped in quotes.`); }
   const suggested = suggestMapping(table.headers);
   const mapping = input.mapping ?? suggested.mapping;
   const missing = REQUIRED.filter((f) => !mapping[f] || !table.headers.includes(mapping[f]));
@@ -81,12 +83,12 @@ function createImport(p: P, input: any) {
   try { control = parseAmountMinor(String(input.control_total ?? "")); } catch { throw new LedgerError("VALIDATION_FAILED", "control_total must be a decimal amount from the source export"); }
   const rows = table.rows.map((raw) => {
     const m = applyMapping(raw, mapping); let amount: bigint | string;
-    try { amount = parseAmountMinor(m.amount ?? ""); } catch { amount = `invalid:${m.amount}`; }
+    try { amount = parseAmountMinor(m.amount ?? ""); } catch { amount = `invalid:${m.amount ?? ""}`; }
     return { source_row_id: m.source_row_id, period: m.period, entity_id: m.entity_id, department: m.department, account: m.account, currency: m.currency?.toUpperCase(), amount_minor: amount };
   });
   const sha = sha256(input.content);
   for (const j of S.imports.values()) if (j.kind === input.kind && j.sha === sha) return { status: j.status, import_id: j.import_id, errors: j.errors, duplicate_of_existing_import: true };
-  const periods = [...new Set(rows.map((r) => r.period).filter(Boolean) as string[])].sort();
+  const periods = [...new Set(rows.map((r) => r.period).filter((x) => !!x && /^\d{4}-(0[1-9]|1[0-2])$/.test(x)) as string[])].sort();
   const v = validateActuals(rows as never, { accounts: Object.keys(ACCOUNTS), departments: DEPTS.map((d) => d.code), currency: "USD", expectedPeriods: input.expected_periods ?? periods, controlTotalMinor: control });
   const errors = [...v.errors, ...rows.filter((r) => r.entity_id !== "ent_demo").map((r) => ({ code: "UNKNOWN_ENTITY", source_row_id: r.source_row_id, message: `Entity ${r.entity_id} is not in scope` }))];
   const job = { import_id: uuid(), kind: input.kind, sha, status: errors.length ? "failed" : "passed", rows, errors, periods, plan_name: input.plan_name, filename: input.filename };

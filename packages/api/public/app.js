@@ -3,6 +3,8 @@ import { MESSAGES } from "./i18n.js";
 const S = { user: null, me: null, dims: null, lang: "he-IL" };
 try { S.user = localStorage.getItem("ll.user"); S.lang = localStorage.getItem("ll.lang") || "he-IL"; } catch {}
 const $ = (sel, el = document) => el.querySelector(sel);
+// Clear the hash without firing hashchange, then render once.
+function resetRoute() { try { history.replaceState(null, "", location.pathname + location.search); } catch {} route(); }
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const t = (k, vars = {}) => (MESSAGES[S.lang][k] ?? k).replace(/\{(\w+)\}/g, (_, n) => vars[n] ?? "");
 const ltr = (s) => `<bdi class="ltr" dir="ltr">${esc(s)}</bdi>`;
@@ -57,18 +59,21 @@ const ROUTES = {
 async function boot() {
   applyLang();
   $("#lang").onclick = () => { S.lang = S.lang === "he-IL" ? "en-US" : "he-IL"; try { localStorage.setItem("ll.lang", S.lang); } catch {} applyLang(); route(); };
-  $("#logout").onclick = () => { S.user = null; S.me = null; try { localStorage.removeItem("ll.user"); } catch {} if (location.hash) location.hash = ""; else route(); };
+  $("#logout").onclick = () => { S.user = null; S.me = null; try { localStorage.removeItem("ll.user"); } catch {} resetRoute(); };
   $("#drawer-close").onclick = () => $("#drawer").close();
   window.addEventListener("hashchange", route);
   route();
 }
 
+let routeSeq = 0;
 async function route() {
+  const seq = ++routeSeq; // only the latest navigation may render
   const main = $("#main");
   if (!S.user) return renderLogin(main);
   try {
-    if (!S.me) { S.me = await api("/me"); S.dims = await api("/dimensions"); }
+    if (!S.me) { const me = await api("/me"), dims = await api("/dimensions"); if (seq !== routeSeq) return; S.me = me; S.dims = dims; }
   } catch (e) { S.user = null; return renderLogin(main); }
+  if (seq !== routeSeq) return;
   const allowed = Object.keys(ROUTES).filter((k) => ROUTES[k].roles.includes(S.me.role));
   let name = location.hash.replace(/^#\/?/, "") || allowed[0];
   if (!allowed.includes(name)) name = allowed[0];
@@ -102,12 +107,9 @@ async function renderLogin(main) {
   const roleOf = { cfo: "cfo", controller: "controller", fpa: "fpa", accountant: "accountant", "mgr-sales": "department_manager", admin: "admin" };
   main.innerHTML = `<h1>${esc(t("login_title"))}</h1><p class="sub">${esc(t("login_sub"))}</p>
     <div class="users" role="list">${users.map((u) => `<button class="user" role="listitem" data-u="${esc(u)}"><strong>${esc(t("role_" + roleOf[u]))}</strong><span>${esc(t("role_" + roleOf[u] + "_d"))}</span></button>`).join("")}</div>`;
-  main.querySelectorAll("[data-u]").forEach((b) => (b.onclick = async () => {
+  main.querySelectorAll("[data-u]").forEach((b) => (b.onclick = () => {
     S.user = b.dataset.u; try { localStorage.setItem("ll.user", S.user); } catch {}
-    const me = await api("/me").catch(() => null);
-    let chosen = null; try { chosen = localStorage.getItem("ll.lang"); } catch {}
-    if (me && !chosen) { S.lang = me.locale; applyLang(); }
-    if (location.hash) location.hash = ""; else route();
+    resetRoute(); // starts on the role's first page; language stays as chosen
   }));
   document.title = "LedgerLens";
 }
@@ -347,8 +349,8 @@ function showImport(r) {
     }));
   } else {
     el.innerHTML = `<div class="card"><div class="notice">${esc(t("import_failed", { n: r.errors.length }))}</div>
-      <table><thead><tr><th scope="col">${esc(t("err_code"))}</th><th scope="col">${esc(t("err_row"))}</th><th scope="col">${esc(t("err_msg"))}</th></tr></thead>
-      <tbody>${r.errors.map((e) => `<tr><td>${esc(t("E_" + e.code))}</td><td>${ltr(e.source_row_id ?? "")}</td><td>${ltr(e.message)}</td></tr>`).join("")}</tbody></table></div>`;
+      <div style="overflow-x:auto"><table class="resp"><thead><tr><th scope="col">${esc(t("err_code"))}</th><th scope="col">${esc(t("err_row"))}</th><th scope="col">${esc(t("err_fix"))}</th><th scope="col">${esc(t("err_msg"))}</th></tr></thead>
+      <tbody>${r.errors.map((e) => `<tr><td><strong>${esc(t("E_" + e.code))}</strong></td><td data-label="${esc(t("err_row"))}">${ltr(e.source_row_id ?? "")}</td><td>${esc(t("FIX_" + e.code))}</td><td data-label="${esc(t("err_msg"))}"><small>${ltr(e.message.replace(/invalid:/, ""))}</small></td></tr>`).join("")}</tbody></table></div></div>`;
   }
   el.querySelector(".notice")?.setAttribute("tabindex", "-1"); el.querySelector(".notice")?.focus();
 }

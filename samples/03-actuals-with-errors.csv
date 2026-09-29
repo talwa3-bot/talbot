@@ -1,0 +1,8 @@
+﻿אסמכתא,חודש,חברה,מחלקה,חשבון,סכום,מטבע
+E-1,2026-04,ent_demo,sales,6000,9800.00,USD
+E-1,2026-04,ent_demo,ops,6100,8300.00,USD
+E-2,2026-04,ent_demo,sales,7777,500.00,USD
+E-3,2026-04,ent_demo,ops,6100,"12,34.5x",USD
+E-4,2026-04,ent_demo,ops,6100,300.00,ILS
+E-5,2026-13,ent_demo,ops,6100,200.00,USD
+E-6,2026-04,ent_demo,marketing,6100,400.00,USD

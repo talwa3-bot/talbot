@@ -15,7 +15,8 @@
     "mcp": "tsx packages/mcp/src/server.ts",
     "e2e": "tsx tests/e2e/flow.ts",
     "demo:build": "node scripts/build-demo.mjs",
-    "demo:smoke": "node tests/e2e/demo-smoke.mjs"
+    "demo:smoke": "node tests/e2e/demo-smoke.mjs",
+    "demo:samples": "node tests/e2e/demo-samples.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

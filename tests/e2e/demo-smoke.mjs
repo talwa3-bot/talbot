@@ -15,7 +15,7 @@ await page.waitForSelector("[data-save]");
 for (const id of await page.$$eval("[data-save]", (x) => x.map((e) => e.dataset.save))) { await page.selectOption(`#s-${id}`, "done"); await page.fill(`#e-${id}`, "doc://x"); await page.click(`[data-save="${id}"]`); await page.waitForTimeout(150); }
 await as(1); await page.evaluate(() => (location.hash = "#close")); await page.waitForSelector("[data-save]"); // controller
 for (const id of await page.$$eval("[data-save]", (x) => x.map((e) => e.dataset.save))) if ((await page.inputValue(`#s-${id}`)) !== "done") { await page.selectOption(`#s-${id}`, "done"); await page.fill(`#e-${id}`, "doc://p"); await page.click(`[data-save="${id}"]`); await page.waitForTimeout(150); }
-await page.click("#ready"); await page.waitForSelector("#draft:not([disabled])"); await page.click("#draft"); await page.waitForSelector("#reqap"); await page.click("#reqap"); await page.waitForSelector("[data-approve], .badge.warn");
+await page.click("#ready"); await page.waitForSelector("#draft:not([disabled])"); await page.click("#draft"); await page.waitForSelector("#reqap"); await page.click("#reqap"); await page.waitForSelector("text=ממתין לאישור");
 await as(0); await page.evaluate(() => (location.hash = "#close")); await page.waitForSelector("[data-approve]"); await page.click("[data-approve]"); await page.waitForSelector("[data-csv]");
 await page.click("[data-csv]"); await page.waitForSelector("#txt"); const ok2 = (await page.textContent("#txt")).includes("department"); await page.keyboard.press("Escape");
 await page.evaluate(() => (location.hash = "#explore")); await page.waitForSelector("#calc"); await page.click("#calc"); await page.waitForSelector("#scres table");

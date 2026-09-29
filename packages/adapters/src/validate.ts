@@ -7,6 +7,7 @@ export interface GateError { code: GateCode; source_row_id?: string; message: st
 export interface ValidationResult { ok: boolean; errors: GateError[]; quarantined: RawRow[]; controlTotalMinor: bigint }
 export interface ValidateOptions { accounts: string[]; expectedPeriods: string[]; currency: string; controlTotalMinor?: bigint; departments?: string[] }
 
+const major = (m: bigint) => { const neg = m < 0n, a = (neg ? -m : m).toString().padStart(3, "0"); return `${neg ? "-" : ""}${a.slice(0, -2)}.${a.slice(-2)}`; };
 const PERIOD = /^\d{4}-(0[1-9]|1[0-2])$/;
 const CCY = /^[A-Z]{3}$/;
 
@@ -42,7 +43,7 @@ export function validateActuals(rows: RawRow[], opts: ValidateOptions): Validati
     if (!periods.has(p)) errors.push({ code: "MISSING_PERIOD", message: `No rows for period ${p}` });
   }
   if (opts.controlTotalMinor !== undefined && total !== opts.controlTotalMinor) {
-    errors.push({ code: "CONTROL_TOTAL_MISMATCH", message: `Rows sum to ${total}, control total is ${opts.controlTotalMinor}` });
+    errors.push({ code: "CONTROL_TOTAL_MISMATCH", message: `Rows sum to ${major(total)}, control total is ${major(opts.controlTotalMinor)}` });
   }
   return { ok: errors.length === 0, errors, quarantined, controlTotalMinor: total };
 }

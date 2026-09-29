@@ -89,6 +89,9 @@ describe("imports", () => {
     expect(await code(() => svc.publishImport(P.admin!, (bad as { import_id: string }).import_id))).toBe("UNRECONCILED_SOURCE");
     expect((await svc.dimensions(P.cfo!)).current_snapshot!.snapshot_id).toBe(before);
   });
+  it("a malformed CSV returns a readable validation error instead of crashing", async () => {
+    await expect(svc.createImport(P.admin!, { kind: "actual", filename: "m.csv", control_total: "1", content: "a,b\n1,2,3\n" })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+  });
   it("Hebrew headers are mapped; missing columns ask for a mapping", async () => {
     const r = await svc.createImport(P.admin!, { kind: "actual", filename: "x.csv", control_total: "1", content: "foo,bar\n1,2\n" });
     expect(r.status).toBe("needs_mapping");
