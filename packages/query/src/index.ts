@@ -34,6 +34,8 @@ export interface Dataset {
   mapping_version: string;
   as_of: string;
   reconciled: boolean;
+  /** Periods the actuals snapshot covers; a query outside them is incomplete. */
+  periods?: string[];
   accounts: Record<string, { type: AccountType }>;
   actual: FactLine[];
   plan: FactLine[];
@@ -87,6 +89,11 @@ export function runQuery(ast: QueryAst, ds: Dataset, scope: Scope): { total: Que
 
   const type = METRICS[ast.metric]!.account_type;
   const { from, to } = ast.period!;
+  if (ds.periods) {
+    for (let m = from; m <= to; m = nextMonth(m)) {
+      if (!ds.periods.includes(m)) throw new LedgerError("INCOMPLETE_DATA", `No published actuals for ${m}`);
+    }
+  }
   const pick = (rows: FactLine[]) => rows.filter((r) =>
     ds.accounts[r.account]?.type === type && r.period >= from && r.period <= to &&
     ast.entity_ids.includes(r.entity_id) &&
@@ -138,4 +145,9 @@ export function runQuery(ast: QueryAst, ds: Dataset, scope: Scope): { total: Que
   // A total that would include hidden departments is withheld: it would let the viewer infer them.
   const total = seesAll ? build({}, actual, plan) : null;
   return { total, rows };
+}
+
+export function nextMonth(p: string): string {
+  const [y, m] = p.split("-").map(Number) as [number, number];
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
 }

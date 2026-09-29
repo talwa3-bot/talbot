@@ -201,6 +201,6 @@ DO $$ DECLARE t text; BEGIN
     'dimension_mappings','metric_definitions','fx_rates','close_periods','close_tasks','scenario_versions',
     'query_runs','metric_results','lineage_links','approval_requests','outbox','audit_events'] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
-    EXECUTE format('CREATE POLICY tenant_isolation ON %I USING (tenant_id = current_setting(''app.tenant_id'')::uuid)', t);
+    EXECUTE format('CREATE POLICY tenant_isolation ON %I USING (tenant_id = nullif(current_setting(''app.tenant_id'', true), '''')::uuid)', t);
   END LOOP;
 END $$;

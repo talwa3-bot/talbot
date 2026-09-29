@@ -1,0 +1,14 @@
+source_row_id,period,entity_id,department,account,amount,currency
+P-0001,2026-01,ent_demo,sales,6000,10000.00,USD
+P-0002,2026-01,ent_demo,ops,6100,8000.00,USD
+P-0003,2026-02,ent_demo,sales,6000,10000.00,USD
+P-0004,2026-02,ent_demo,ops,6100,8000.00,USD
+P-0005,2026-03,ent_demo,sales,6000,10000.00,USD
+P-0006,2026-03,ent_demo,ops,6100,8000.00,USD
+P-0007,2026-04,ent_demo,sales,6000,10000.00,USD
+P-0008,2026-04,ent_demo,ops,6100,8000.00,USD
+P-0009,2026-05,ent_demo,sales,6000,10000.00,USD
+P-0010,2026-05,ent_demo,ops,6100,8000.00,USD
+P-0011,2026-06,ent_demo,sales,6000,10000.00,USD
+P-0012,2026-06,ent_demo,ops,6100,8000.00,USD
+P-0013,2026-01,ent_demo,sales,4000,48000.00,USD

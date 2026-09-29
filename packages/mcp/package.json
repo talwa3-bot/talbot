@@ -1,0 +1,1 @@
+{"name":"@ledgerlens/mcp","version":"0.1.0","private":true,"type":"module","main":"src/index.ts","dependencies":{"@modelcontextprotocol/sdk":"^1.31.0","zod":"^4.6.5"}}
