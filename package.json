@@ -1,0 +1,9 @@
+{
+  "name": "talbot-shareholder-tools",
+  "private": true,
+  "description": "כלי אופליין: ריבית רעיונית 3(ט)/3(י) ובודק משיכות בעלים",
+  "scripts": {
+    "build": "node app/build.js",
+    "test": "node --test app/test/*.test.js"
+  }
+}
