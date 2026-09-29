@@ -9,7 +9,7 @@ export interface NarrationInput {
 }
 export interface ModelGateway { readonly name: string; narrate(input: NarrationInput): Promise<string> }
 
-const DIR_HE: Record<string, string> = { favorable: "חיובית", unfavorable: "שלילית", neutral: "ללא סטייה", unknown: "לא מסווגת" };
+const DIR_HE: Record<string, string> = { favorable: "לטובה", unfavorable: "חריגה מהתקציב", neutral: "ללא סטייה", unknown: "לא מסווגת" };
 
 /** Deterministic offline narrator. Also the fallback when a model answer is rejected. */
 export class TemplateModel implements ModelGateway {

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LedgerLens</title>
+<link rel="stylesheet" href="/app.css">
+<script type="module" src="/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">דלג לתוכן</a>
+<header class="top">
+  <div class="brand"><span class="logo" aria-hidden="true">◈</span> <span>LedgerLens</span></div>
+  <nav aria-label="" id="nav" hidden></nav>
+  <div class="top-actions">
+    <button id="lang" class="ghost" type="button" aria-label="Switch to English">English</button>
+    <button id="logout" class="ghost" type="button" hidden data-i18n="logout">יציאה</button>
+  </div>
+</header>
+<div id="context" class="context" role="status" hidden></div>
+<main id="main" tabindex="-1"></main>
+<div id="toast" class="toast" role="alert" aria-live="assertive" hidden></div>
+<dialog id="drawer" aria-labelledby="drawer-title">
+  <div class="drawer-head"><h2 id="drawer-title"></h2><button class="ghost" id="drawer-close" type="button" data-i18n="close">סגירה</button></div>
+  <div id="drawer-body"></div>
+</dialog>
+</body>
+</html>

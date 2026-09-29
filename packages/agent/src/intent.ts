@@ -19,6 +19,9 @@ export function parseQuestion(question: string, ctx: { defaultYear: number; depa
   let q = question.toLowerCase().replace(/[?？!.,״"׳']/g, " ").replace(/\s+/g, " ");
   const assumptions: string[] = [];
 
+  if (/(last|previous|this) (quarter|month)|רבעון ה?(שעבר|קודם|אחרון|נוכחי)|חודש ה?(שעבר|קודם|אחרון|נוכחי)|החודש\b/.test(q)) {
+    return { kind: "clarify", reason: "relative_period" };
+  }
   let metric: "opex" | "revenue" | undefined;
   const OPEX = /(הוצאות (ה)?תפעול|הוצאות תפעוליות|הוצאות|operating[- ]expenses?|operating[- ]expense|opex|expenses?)/;
   const REV = /(הכנסות|revenue|sales revenue)/;
@@ -26,9 +29,7 @@ export function parseQuestion(question: string, ctx: { defaultYear: number; depa
   else if (REV.test(q)) { metric = "revenue"; q = q.replace(REV, " "); }
   if (!metric) return { kind: "clarify", reason: "metric" };
 
-  if (/(last|previous|this) (quarter|month)|רבעון (שעבר|קודם|האחרון|הנוכחי)|הרבעון (שעבר|הקודם|האחרון|הנוכחי)|חודש (שעבר|קודם)|החודש/.test(q)) {
-    return { kind: "clarify", reason: "relative_period" };
-  }
+
 
   const yearM = q.match(/\b(20\d\d)\b/);
   const year = yearM ? Number(yearM[1]) : ctx.defaultYear;
