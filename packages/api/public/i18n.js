@@ -56,7 +56,7 @@ export const MESSAGES = {
     E_UNSUPPORTED_QUERY: "השאלה מחוץ למה שהמערכת יודעת לחשב.", E_NOT_FOUND: "הפריט לא נמצא.", E_UNAUTHENTICATED: "צריך להתחבר מחדש.", E_MIXED_CURRENCY: "יש יותר ממטבע אחד ואין מדיניות המרה מאושרת.",
     E_DUPLICATE_ROW: "שורה כפולה", E_UNKNOWN_ACCOUNT: "חשבון לא מוכר", E_UNKNOWN_DEPARTMENT: "מחלקה לא מוכרת", E_MISSING_PERIOD: "חודש חסר", E_CONTROL_TOTAL_MISMATCH: "סכום הבקרה לא תואם",
     E_INVALID_CURRENCY: "מטבע לא תקין", E_INVALID_AMOUNT: "סכום לא תקין", E_INVALID_PERIOD: "חודש לא תקין", E_MISSING_FIELD: "שדה חסר", E_UNKNOWN_ENTITY: "ישות לא מוכרת",
-    source_note: "מקור: הערה מאושרת", gate_pass: "עבר", gate_fail: "לא עבר", task_bank_reconciliation: "התאמת בנקים", task_accruals_review: "בדיקת הפרשות", task_payroll_reconciliation: "התאמת שכר", snapshot: "גרסת ביצוע", plan_version: "גרסת תקציב", as_of: "נכון ל־", model: "ניסוח",
+    source_note: "מקור: הערה מאושרת", gate_pass: "עבר", copy: "העתקה", copied: "הועתק", demo_banner: "גרסת הדגמה שרצה בדפדפן. כל הנתונים סינתטיים, נשארים אצלך ומתאפסים ברענון הדף.", gate_fail: "לא עבר", task_bank_reconciliation: "התאמת בנקים", task_accruals_review: "בדיקת הפרשות", task_payroll_reconciliation: "התאמת שכר", snapshot: "גרסת ביצוע", plan_version: "גרסת תקציב", as_of: "נכון ל־", model: "ניסוח",
   },
   "en-US": {
     skip: "Skip to content", logout: "Sign out", close: "Close", nav: "Main navigation",
@@ -114,6 +114,6 @@ export const MESSAGES = {
     E_UNSUPPORTED_QUERY: "That question is outside what the system can compute.", E_NOT_FOUND: "Not found.", E_UNAUTHENTICATED: "Please sign in again.", E_MIXED_CURRENCY: "More than one currency and no approved FX policy.",
     E_DUPLICATE_ROW: "Duplicate row", E_UNKNOWN_ACCOUNT: "Unknown account", E_UNKNOWN_DEPARTMENT: "Unknown department", E_MISSING_PERIOD: "Missing month", E_CONTROL_TOTAL_MISMATCH: "Control total mismatch",
     E_INVALID_CURRENCY: "Invalid currency", E_INVALID_AMOUNT: "Invalid amount", E_INVALID_PERIOD: "Invalid month", E_MISSING_FIELD: "Missing field", E_UNKNOWN_ENTITY: "Unknown entity",
-    source_note: "Source: approved note", gate_pass: "Passed", gate_fail: "Not passed", task_bank_reconciliation: "Bank reconciliation", task_accruals_review: "Accruals review", task_payroll_reconciliation: "Payroll reconciliation", snapshot: "Actuals version", plan_version: "Budget version", as_of: "As of", model: "Wording",
+    source_note: "Source: approved note", gate_pass: "Passed", copy: "Copy", copied: "Copied", demo_banner: "Browser demo. All data is synthetic, stays on your device, and resets when you reload.", gate_fail: "Not passed", task_bank_reconciliation: "Bank reconciliation", task_accruals_review: "Accruals review", task_payroll_reconciliation: "Payroll reconciliation", snapshot: "Actuals version", plan_version: "Budget version", as_of: "As of", model: "Wording",
   },
 };

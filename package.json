@@ -13,7 +13,9 @@
     "db:seed": "tsx scripts/seed.ts",
     "start": "LEDGERLENS_DEMO_AUTH=1 tsx packages/api/src/server.ts",
     "mcp": "tsx packages/mcp/src/server.ts",
-    "e2e": "tsx tests/e2e/flow.ts"
+    "e2e": "tsx tests/e2e/flow.ts",
+    "demo:build": "node scripts/build-demo.mjs",
+    "demo:smoke": "node tests/e2e/demo-smoke.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

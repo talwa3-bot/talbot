@@ -43,6 +43,7 @@ function applyLang() {
   $("#lang").setAttribute("aria-label", he ? "Switch to English" : "מעבר לעברית");
   document.querySelectorAll("[data-i18n]").forEach((el) => (el.textContent = t(el.dataset.i18n)));
   $("#nav").setAttribute("aria-label", t("nav"));
+  const demo = $("#demo"); if (demo) { demo.hidden = !window.LEDGERLENS_DEMO; demo.textContent = t("demo_banner"); }
 }
 
 const ROUTES = {
@@ -56,7 +57,7 @@ const ROUTES = {
 async function boot() {
   applyLang();
   $("#lang").onclick = () => { S.lang = S.lang === "he-IL" ? "en-US" : "he-IL"; try { localStorage.setItem("ll.lang", S.lang); } catch {} applyLang(); route(); };
-  $("#logout").onclick = () => { S.user = null; S.me = null; try { localStorage.removeItem("ll.user"); } catch {} location.hash = ""; route(); };
+  $("#logout").onclick = () => { S.user = null; S.me = null; try { localStorage.removeItem("ll.user"); } catch {} if (location.hash) location.hash = ""; else route(); };
   $("#drawer-close").onclick = () => $("#drawer").close();
   window.addEventListener("hashchange", route);
   route();
@@ -72,7 +73,7 @@ async function route() {
   let name = location.hash.replace(/^#\/?/, "") || allowed[0];
   if (!allowed.includes(name)) name = allowed[0];
   $("#nav").hidden = false; $("#logout").hidden = false;
-  $("#nav").innerHTML = allowed.map((k) => `<a href="#/${k}" ${k === name ? 'aria-current="page"' : ""}>${esc(t("nav_" + k))}</a>`).join("");
+  $("#nav").innerHTML = allowed.map((k) => `<a href="#${k}" ${k === name ? 'aria-current="page"' : ""}>${esc(t("nav_" + k))}</a>`).join("");
   renderContext();
   main.innerHTML = "";
   await ROUTES[name].render(main);
@@ -104,10 +105,26 @@ async function renderLogin(main) {
   main.querySelectorAll("[data-u]").forEach((b) => (b.onclick = async () => {
     S.user = b.dataset.u; try { localStorage.setItem("ll.user", S.user); } catch {}
     const me = await api("/me").catch(() => null);
-    if (me && !localStorage.getItem("ll.lang")) { S.lang = me.locale; applyLang(); }
-    location.hash = ""; route();
+    let chosen = null; try { chosen = localStorage.getItem("ll.lang"); } catch {}
+    if (me && !chosen) { S.lang = me.locale; applyLang(); }
+    if (location.hash) location.hash = ""; else route();
   }));
   document.title = "LedgerLens";
+}
+
+// Sandboxed viewers block downloads, so the static demo shows file contents with a copy button.
+function showText(title, text) {
+  const d = $("#drawer"); $("#drawer-title").textContent = title;
+  $("#drawer-body").innerHTML = `<p><button type="button" id="copytxt">${esc(t("copy"))}</button></p><pre class="ltr" dir="ltr" style="white-space:pre-wrap;overflow-x:auto"><code id="txt">${esc(text)}</code></pre>`;
+  $("#copytxt").onclick = async () => { try { await navigator.clipboard.writeText(text); toast(t("copied")); } catch { const r = document.createRange(); r.selectNodeContents($("#txt")); getSelection().removeAllRanges(); getSelection().addRange(r); } };
+  d.showModal();
+}
+async function deliverFile(url, filename, title) {
+  const r = await fetch(url, { headers: { authorization: `Bearer demo:${S.user}` } });
+  if (!r.ok) throw Object.assign(new Error("export failed"), await r.json());
+  const text = (await r.text()).replace(/^\uFEFF/, "");
+  if (window.LEDGERLENS_DEMO) return showText(title, text);
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\uFEFF" + text], { type: "text/csv" })); a.download = filename; a.click();
 }
 
 // ---------------- Ask ----------------
@@ -228,9 +245,7 @@ async function loadClose() {
   $("#draft")?.addEventListener("click", (ev) => guarded(ev.currentTarget, async () => { const d = await api(`/close/${period}/summary-draft`, { method: "POST", write: true }); showSummary(d, period); }));
   el.querySelectorAll("[data-approve]").forEach((b) => (b.onclick = () => guarded(b, async () => { await api(`/approvals/${b.dataset.approve}/approve`, { method: "POST", write: true, body: { artifact_hash: b.dataset.hash } }); await loadClose(); })));
   el.querySelectorAll("[data-csv]").forEach((b) => (b.onclick = () => guarded(b, async () => {
-    const r = await fetch(`/export/summary.csv?period=${period}`, { headers: { authorization: `Bearer demo:${S.user}` } });
-    if (!r.ok) throw Object.assign(new Error("export failed"), await r.json());
-    const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = `close-summary-${period}.csv`; a.click();
+    await deliverFile(`/export/summary.csv?period=${period}`, `close-summary-${period}.csv`, t("download_csv"));
   })));
 }
 function showSummary(d, period) {
@@ -294,7 +309,7 @@ function renderScenario(r) {
 // ---------------- Data ----------------
 async function renderData(main) {
   main.innerHTML = `<h1>${esc(t("data_title"))}</h1><p class="sub">${esc(t("data_sub"))}</p>
-  <div class="card"><h2>${esc(t("templates"))}</h2><div class="row"><a class="btn ghost" href="/api/v1/templates/actuals.csv" download>${esc(t("tpl_actuals"))}</a><a class="btn ghost" href="/api/v1/templates/plan.csv" download>${esc(t("tpl_plan"))}</a></div></div>
+  <div class="card"><h2>${esc(t("templates"))}</h2><div class="row"><button type="button" class="ghost" data-tpl="actuals">${esc(t("tpl_actuals"))}</button><button type="button" class="ghost" data-tpl="plan">${esc(t("tpl_plan"))}</button></div></div>
   <form id="impf" class="card">
     <div class="row"><div><label for="kind">${esc(t("kind"))}</label><select id="kind"><option value="actual">${esc(t("kind_actual"))}</option><option value="plan">${esc(t("kind_plan"))}</option></select></div>
       <div id="pn" hidden><label for="plan_name">${esc(t("plan_name"))}</label><input id="plan_name" value="Budget"></div></div>
@@ -303,6 +318,7 @@ async function renderData(main) {
     <div id="mapping"></div>
     <button id="chk">${esc(t("check_file"))}</button>
   </form><section id="impres" aria-live="polite"></section>`;
+  main.querySelectorAll("[data-tpl]").forEach((b) => (b.onclick = () => guarded(b, () => deliverFile(`/api/v1/templates/${b.dataset.tpl}.csv`, `${b.dataset.tpl}-template.csv`, b.textContent))));
   $("#kind").onchange = () => ($("#pn").hidden = $("#kind").value !== "plan");
   const drop = $("#drop");
   ["dragover", "dragenter"].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add("over"); }));

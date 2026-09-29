@@ -33,6 +33,10 @@ Pick a user on the sign-in screen. Suggested walkthrough:
 6. **FP&A** → Scenarios: +5% Sales from April.
 7. **Data steward** → Data import: download a template, upload, see validation.
 
+## Static browser demo
+
+`npm run demo:build` writes `dist-demo/ledgerlens-demo.html`: one self-contained file that runs the same calculation, policy, import-gate and citation-validator code in the browser against synthetic data, with no server or database. State resets on reload. `npm run demo:smoke` drives it end to end.
+
 ## Environment variables
 
 | Name | Purpose |

@@ -84,7 +84,7 @@ await login(page, "accountant"); await page.waitForSelector("[data-save]");
 for (const id of await page.$$eval("[data-save]", (b) => b.map((x) => (x as HTMLElement).dataset.save!))) {
   await page.selectOption(`#s-${id}`, "done"); await page.fill(`#e-${id}`, `doc://${id.slice(0, 6)}`); await Promise.all([page.waitForResponse((r) => r.url().includes("/tasks") && r.request().method() === "GET"), page.click(`[data-save="${id}"]`)]);
 }
-await login(page, "controller"); await page.goto(`${BASE}/#/close`); await page.waitForSelector("[data-save]");
+await login(page, "controller"); await page.goto(`${BASE}/#close`); await page.waitForSelector("[data-save]");
 for (const id of await page.$$eval("[data-save]", (b) => b.map((x) => (x as HTMLElement).dataset.save!))) {
   if ((await page.inputValue(`#s-${id}`)) !== "done") { await page.selectOption(`#s-${id}`, "done"); await page.fill(`#e-${id}`, "doc://payroll"); await Promise.all([page.waitForResponse((r) => r.url().includes("/tasks") && r.request().method() === "GET"), page.click(`[data-save="${id}"]`)]); }
 }
@@ -93,12 +93,12 @@ await page.waitForSelector("#draft:not([disabled])"); await page.click("#draft")
 await page.waitForSelector("#reqap"); await page.screenshot({ path: `${OUT}/05-close.png`, fullPage: true });
 await axe(page, "close");
 await page.click("#reqap"); await page.waitForSelector("text=ממתין לאישור");
-await login(page, "cfo"); await page.goto(`${BASE}/#/close`); await page.waitForSelector("[data-approve]");
+await login(page, "cfo"); await page.goto(`${BASE}/#close`); await page.waitForSelector("[data-approve]");
 await page.click("[data-approve]"); await page.waitForSelector("[data-csv]");
 check(true, "CFO approved exact version; CSV export available");
 
 // Scenario
-await page.goto(`${BASE}/#/explore`); await page.waitForSelector("#calc");
+await page.goto(`${BASE}/#explore`); await page.waitForSelector("#calc");
 await page.click("#calc"); await page.waitForSelector("#scres table");
 check((await page.textContent("#scres"))!.includes("היפותטי"), "scenario is labeled hypothetical");
 await page.screenshot({ path: `${OUT}/06-scenario.png`, fullPage: true });
