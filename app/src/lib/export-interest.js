@@ -279,7 +279,7 @@
     }
     writeJournalSheet(wb, used, ctx, allEntries);
     writeControlsSheet(wb, used, ctx);
-    writeTransactionsSheet(wb, used, ctx, false);
+    if (!opts.skipTransactions) writeTransactionsSheet(wb, used, ctx, false);
     return { wb, used };
   }
 

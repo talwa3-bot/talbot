@@ -19,6 +19,7 @@ const order = [
   'src/lib/classify.js',
   'src/lib/export-analysis.js',
   'src/lib/pipeline.js',
+  'src/ui-analysis.js',
   'src/ui.js',
 ].filter((p) => fs.existsSync(path.join(root, p)));
 

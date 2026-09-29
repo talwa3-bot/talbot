@@ -923,11 +923,416 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
     writeJournalSheet(wb, used, ctx, allEntries);
     writeControlsSheet(wb, used, ctx);
-    writeTransactionsSheet(wb, used, ctx, false);
+    if (!opts.skipTransactions) writeTransactionsSheet(wb, used, ctx, false);
     return { wb, used };
   }
 
   return { buildInterestWorkbook, writeInterestSheet, writeJournalSheet, writeControlsSheet, writeTransactionsSheet, journalEntries, SECTION_LABEL };
+});
+
+</script>
+<script>/* src/lib/classify.js */
+/* בודק משיכות בעלים: סיווג תנועות, דגלי סיכון, חשיפות וחלופות סיווג.
+ * כל התוצאות הן כלי עזר לסוקר ולא קביעה משפטית. הסיווג האוטומטי לפי מילות מפתח ניתן לעריכה ידנית. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./calc.js'));
+  else root.Classify = factory(root.Calc);
+})(typeof self !== 'undefined' ? self : this, function (Calc) {
+  const CATS = {
+    opening: 'יתרת פתיחה',
+    salary: 'שכר / משכורת',
+    dividend: 'דיבידנד',
+    loan_out: 'הלוואה לבעל המניות',
+    loan_in: 'הלוואה מבעל המניות לחברה',
+    repay: 'החזר / פירעון',
+    withdrawal: 'משיכה פרטית',
+    expense: 'החזר הוצאות',
+    interest: 'ריבית / הצמדה',
+    vat: 'מע"מ',
+    capital: 'הפקדה / הזרמת הון',
+    unclassified: 'לא מסווג',
+  };
+
+  const R = {
+    interest: /ריבית|הצמדה/,
+    vat: /מע["״'׳]?מ|מעמ/,
+    dividend: /דיבידנד|דיב['׳]|חלוקת\s*(רווחים|דיבידנד)/,
+    salary: /משכורת|שכר|תלוש|שכ["״'׳]ע|בונוס|משכר/,
+    loan: /הלוואה|הלוואת|הלואה/,
+    repay: /החזר|פירעון|השבה|קיזוז|זיכוי/,
+    expense: /החזר\s*הוצאות|הוצאות|נסיעות|דלק|ארוחות|אש["״'׳]ל|חשבונית|קבלה/,
+    capital: /הפקדה|הפקדת|הזרמה|הזרמת|הון|השקעה/,
+    withdrawalStrong: /משיכה|משיכת|משיכות/,
+    withdrawalWeak: /העברה|העברת|צ['׳]ק|שיק|מזומן|כספומט|אשראי|פרטי|הוראת\s*קבע|בנק/,
+  };
+
+  function classifyRow(r) {
+    if (r.kind === 'opening') return { cat: 'opening', reason: 'שורת יתרת פתיחה', confidence: 'high' };
+    const d = r.desc || '';
+    const debit = (r.debit || 0) > 0;
+    const credit = (r.credit || 0) > 0;
+    if (R.interest.test(d)) return { cat: 'interest', reason: 'מילת מפתח: ריבית/הצמדה', confidence: 'high' };
+    if (R.vat.test(d)) return { cat: 'vat', reason: 'מילת מפתח: מע"מ', confidence: 'high' };
+    if (R.dividend.test(d)) return { cat: 'dividend', reason: 'מילת מפתח: דיבידנד', confidence: 'high' };
+    if (R.salary.test(d)) return { cat: 'salary', reason: 'מילת מפתח: שכר', confidence: 'high' };
+    if (R.loan.test(d)) {
+      if (credit && R.repay.test(d)) return { cat: 'repay', reason: 'החזר הלוואה', confidence: 'high' };
+      return debit ? { cat: 'loan_out', reason: 'מילת מפתח: הלוואה (חובה)', confidence: 'medium' } : { cat: 'loan_in', reason: 'מילת מפתח: הלוואה (זכות)', confidence: 'medium' };
+    }
+    if (credit && R.repay.test(d)) return { cat: 'repay', reason: 'מילת מפתח: החזר', confidence: 'medium' };
+    if (R.expense.test(d)) return { cat: 'expense', reason: 'מילת מפתח: הוצאות', confidence: 'low' };
+    if (credit && R.capital.test(d)) return { cat: 'capital', reason: 'מילת מפתח: הפקדה/הון', confidence: 'medium' };
+    if (debit && R.withdrawalStrong.test(d)) return { cat: 'withdrawal', reason: 'מילת מפתח: משיכה', confidence: 'high' };
+    if (debit && R.withdrawalWeak.test(d)) return { cat: 'withdrawal', reason: 'תיאור תנועת כסף כללי', confidence: 'low' };
+    return { cat: 'unclassified', reason: 'לא זוהתה מילת מפתח', confidence: 'none' };
+  }
+
+  const UNDOC_DEBIT = new Set(['withdrawal', 'unclassified', 'loan_out']);
+  const UNDOC_CREDIT = new Set(['repay', 'capital']);
+
+  const DEFAULT_PARAMS = { divRate: 30, salaryRate: 47, employerRate: 7.5, bigAmount: 10000 };
+
+  function analyze(group, yb, paramsIn) {
+    const params = Object.assign({}, DEFAULT_PARAMS, paramsIn || {});
+    const y = yb.year;
+    const start = Calc.dayNum(y, 1, 1);
+    const end = Calc.dayNum(y, 12, 31);
+    const review = group.review || {};
+    const all = group.rows
+      .filter((r) => r.kind !== 'opening' && r.date != null)
+      .slice()
+      .sort((a, b) => a.date - b.date || a.seq - b.seq);
+    const rows = all.filter((r) => r.date >= start && r.date <= end);
+    const nextJan = all.filter((r) => r.date > end && r.date <= end + 31);
+
+    rows.forEach((r) => {
+      const auto = classifyRow(r);
+      r.cat = r.catOverride || auto.cat;
+      r.catReason = r.catOverride ? 'שונה ידנית' : auto.reason;
+      r.catConf = r.catOverride ? 'manual' : auto.confidence;
+      r.catLabel = CATS[r.cat];
+      r.flags = [];
+    });
+
+    // מסלול יתרה (כולל שורות הריבית שבכרטסת)
+    let bal = yb.opening;
+    let peakD = { value: bal > 0 ? bal : 0, date: null };
+    let peakC = { value: bal < 0 ? -bal : 0, date: null };
+    const monthEnd = new Array(13).fill(null);
+    monthEnd[0] = bal;
+    rows.forEach((r) => {
+      bal += (r.debit || 0) - (r.credit || 0);
+      r.runBal = Calc.round2(bal);
+      if (bal > peakD.value) peakD = { value: bal, date: r.date };
+      if (-bal > peakC.value) peakC = { value: -bal, date: r.date };
+      monthEnd[Calc.fromDayNum(r.date).m] = bal;
+    });
+    let carry = yb.opening;
+    let monthsDebit = 0;
+    let monthsCredit = 0;
+    for (let m = 1; m <= 12; m++) {
+      if (monthEnd[m] == null) monthEnd[m] = carry;
+      carry = monthEnd[m];
+      if (carry > 0.5) monthsDebit++;
+      else if (carry < -0.5) monthsCredit++;
+    }
+
+    // דגלים
+    const seen = new Map();
+    rows.forEach((r, i) => {
+      const amt = (r.debit || 0) + (r.credit || 0);
+      const key = [r.date, r.debit, r.credit, r.desc].join('|');
+      if (seen.has(key)) { r.flags.push({ code: 'dup', text: 'תנועה כפולה אפשרית' }); seen.get(key).flags.push({ code: 'dup', text: 'תנועה כפולה אפשרית' }); }
+      else seen.set(key, r);
+      if (r.debit >= params.bigAmount && UNDOC_DEBIT.has(r.cat)) r.flags.push({ code: 'big', text: 'משיכה גדולה' });
+      if (r.debit >= 5000 && r.debit % 1000 === 0 && UNDOC_DEBIT.has(r.cat)) r.flags.push({ code: 'round', text: 'סכום עגול' });
+      if ((r.desc || '').trim().length < 3 && amt >= 1000) r.flags.push({ code: 'nodesc', text: 'ללא תיאור מספק' });
+      if (r.cat === 'unclassified' && r.debit > 0) r.flags.push({ code: 'unclassified', text: 'משיכה ללא סיווג' });
+      if (r.credit > 0 && (UNDOC_CREDIT.has(r.cat) || r.cat === 'unclassified')) {
+        const hit = rows.slice(i + 1).find((x) => x.date <= r.date + 14 && x.debit > 0 && x.debit >= r.credit * 0.9 && x.debit <= r.credit * 1.1 && r.credit >= 5000);
+        if (hit) { r.flags.push({ code: 'circular', text: 'החזר ואחריו משיכה דומה תוך 14 יום' }); }
+      }
+      if (r.credit >= 5000 && r.date >= Calc.dayNum(y, 12, 15) && r.cat !== 'interest') {
+        const hit = nextJan.find((x) => x.debit > 0 && x.debit >= r.credit * 0.9 && x.debit <= r.credit * 1.1);
+        if (hit) r.flags.push({ code: 'yearend', text: 'החזר לפני סוף השנה ומשיכה דומה בינואר (עיטור חלונות אפשרי)' });
+      }
+    });
+
+    // סיכומים לפי סיווג
+    const byCat = {};
+    Object.keys(CATS).forEach((k) => { byCat[k] = { debit: 0, credit: 0, count: 0 }; });
+    rows.forEach((r) => { const c = byCat[r.cat]; c.debit += r.debit || 0; c.credit += r.credit || 0; c.count++; });
+    Object.values(byCat).forEach((c) => { c.debit = Calc.round2(c.debit); c.credit = Calc.round2(c.credit); });
+
+    const loanAgree = review.loanAgreement === 'yes';
+    const debitBase = rows.filter((r) => UNDOC_DEBIT.has(r.cat) && !(loanAgree && r.cat === 'loan_out')).reduce((s, r) => s + (r.debit || 0), 0);
+    const creditBase = rows.filter((r) => UNDOC_CREDIT.has(r.cat)).reduce((s, r) => s + (r.credit || 0), 0);
+    const undocNet = Math.max(0, Calc.round2(debitBase - creditBase));
+    const t = yb.res.totals;
+    const totalDebits = rows.reduce((s, r) => s + (r.debit || 0), 0);
+    const unclassifiedDebit = rows.filter((r) => r.cat === 'unclassified').reduce((s, r) => s + (r.debit || 0), 0);
+
+    const exposure = {
+      undocNet,
+      loan: { net: t.netD, vat: t.vatD, total: t.totalD },
+      dividend: { base: undocNet, rate: params.divRate, tax: Calc.round0((undocNet * params.divRate) / 100) },
+      salary: { base: undocNet, rate: params.salaryRate, employer: params.employerRate, tax: Calc.round0((undocNet * (params.salaryRate + params.employerRate)) / 100) },
+    };
+
+    // אינדיקטורים
+    const ind = [];
+    const closingDebit = t.closing > 0.5;
+    const openingDebit = yb.opening > 0.5;
+    if (openingDebit && closingDebit && monthsDebit === 12) ind.push({ sev: 'high', text: 'יתרת חובה לאורך כל השנה, כולל פתיחה וסגירה. לא נראה פירעון בפועל. יש לבחון אם מדובר בהלוואה אמיתית או במשיכה שיש לסווג מחדש.' });
+    else if (closingDebit) ind.push({ sev: 'medium', text: 'יתרת סגירה בחובה של ' + Calc.round2(t.closing).toLocaleString('he-IL') + '. בעל המניות חייב לחברה בסוף השנה.' });
+    if (closingDebit && review.loanAgreement !== 'yes') ind.push({ sev: 'high', text: review.loanAgreement === 'no' ? 'אין הסכם הלוואה כתוב ובכרטסת יתרת חובה: סיכון מיידי לסיווג מחדש.' : 'לא אושר קיומו של הסכם הלוואה כתוב. אם אין הסכם, קיים סיכון מיידי לסיווג מחדש. יש לברר.' });
+    if (closingDebit && review.interestPaid === 'no') ind.push({ sev: 'high', text: 'לא שולמה ריבית על יתרת החובה. יש חשיפה לריבית רעיונית ' + (t.debitKey === 's3t1' ? '3(ט1)' : '3(ט)') + ' ולמע"מ עליה.' });
+    if (closingDebit && review.controlling === 'yes') ind.push({ sev: 'medium', text: 'בעל שליטה עם יתרת חובה: יש לבחון גם את ההוראות לגבי בעל מניות מהותי.' });
+    const hasInterestRows = rows.some((r) => r.cat === 'interest');
+    if ((openingDebit || closingDebit) && !hasInterestRows) ind.push({ sev: 'medium', text: 'לא נרשמה בכרטסת ריבית רעיונית במהלך השנה.' });
+    if (totalDebits > 0 && unclassifiedDebit / totalDebits > 0.3) ind.push({ sev: 'medium', text: 'מעל 30% מסך החובות אינם מסווגים (' + Math.round((unclassifiedDebit / totalDebits) * 100) + '%). מומלץ להשלים סיווג לפני מסקנה.' });
+    if (byCat.dividend.count && review.dividendDecision === 'no') ind.push({ sev: 'high', text: 'נרשמו תנועות דיבידנד ללא החלטה מתועדת של החברה. יש לברר את המסמכים.' });
+    if (review.offsets === 'yes') ind.push({ sev: 'low', text: 'דווח על קיזוזים / החזרים / חלוקות. יש לצרף אסמכתאות לכל אחד.' });
+    if (rows.some((r) => r.flags.some((f) => f.code === 'yearend'))) ind.push({ sev: 'high', text: 'זוהה החזר סמוך לסוף השנה שאחריו משיכה דומה בינואר. ייתכן שהוא נועד להקטין את יתרת החובה בדוחות (עיטור חלונות אפשרי).' });
+    if (rows.some((r) => r.flags.some((f) => f.code === 'circular'))) ind.push({ sev: 'medium', text: 'זוהו החזרים שאחריהם משיכה דומה תוך שבועיים.' });
+    if (monthsCredit > 0 && t.linkageRaw === 0 && !t.cpi) ind.push({ sev: 'low', text: 'קיימת יתרת זכות (החברה חייבת לבעל המניות). יש לבחון ריבית מינימלית 3(י) והצמדה.' });
+    if (t.days !== t.diy) ind.push({ sev: 'low', text: 'סך הימים בחישוב הריבית (' + t.days + ') שונה מימי השנה (' + t.diy + ').' });
+
+    return {
+      year: y, opening: yb.opening, closing: t.closing, peakD, peakC, monthsDebit, monthsCredit, avgBalance: yb.cmp.avgBalance,
+      byCat, rows, exposure, indicators: ind, params, review, totalDebits: Calc.round2(totalDebits),
+      totalCredits: Calc.round2(rows.reduce((s, r) => s + (r.credit || 0), 0)),
+      flagged: rows.filter((r) => r.flags.length),
+    };
+  }
+
+  function alternatives(a) {
+    const e = a.exposure;
+    const n = (x) => Number(x).toLocaleString('he-IL');
+    return [
+      { name: 'הלוואה אמיתית', pros: 'אם קיים הסכם, ריבית ופירעון צפוי, אין מס על המשיכה עצמה.', cons: 'נדרשת ריבית לפי 3(ט)/3(י) ומע"מ על הריבית. בלי הסכם וביצוע בפועל הטיעון חלש.', risk: 'ריבית רעיונית ' + n(e.loan.net) + ' + מע"מ ' + n(e.loan.vat), evidence: 'הסכם הלוואה חתום, לוח סילוקין, החלטת החברה, תשלומי ריבית והחזרים בפועל.' },
+      { name: 'דיבידנד (חלוקה)', pros: 'פתרון סופי ליתרה. מקובל כשיש רווחים ראויים לחלוקה.', cons: 'מס בידי בעל המניות, נדרשות החלטה ומבחן יכולת פירעון, ודיווח במועד.', risk: 'מס דיבידנד משוער ' + n(e.dividend.tax) + ' (' + e.dividend.rate + '%, לא כולל מס יסף)', evidence: 'החלטת דירקטוריון/אסיפה, בחינת רווחים ראויים לחלוקה, ניכוי מס במקור.' },
+      { name: 'שכר', pros: 'אם המשיכה בגין עבודה בפועל, ההוצאה מוכרת לחברה.', cons: 'מס שולי גבוה, ביטוח לאומי ועלות מעסיק, ודורש הצדקה לשיעור השכר.', risk: 'עלות משוערת ' + n(e.salary.tax) + ' (' + e.salary.rate + '% + ' + e.salary.employer + '%)', evidence: 'הסכם העסקה, תלושי שכר, דיווחים לרשויות, סבירות השכר.' },
+      { name: 'משיכה פרטית ללא סיווג (מצב קיים)', pros: 'אין פעולה מיידית.', cons: 'סיכון לסיווג בידי פקיד השומה כדיבידנד מוסווה או הכנסה אחרת, בתוספת ריבית והצמדה.', risk: 'תלוי בסיווג שייקבע', evidence: '-' },
+    ];
+  }
+
+  function documents(a) {
+    const d = ['הסכם הלוואה כתוב וחתום (סכום, ריבית, מועדי פירעון)', 'החלטת החברה (דירקטוריון / אסיפה) על מתן ההלוואה או על חלוקה', 'אסמכתאות בנקאיות לכל משיכה מהותית', 'לוח סילוקין ואסמכתאות לתשלומי ריבית והחזרים', 'אישור על שיעור החזקה ומעמד בעל המניות בחברה', 'חישוב ריבית רעיונית לשנה (נייר העבודה הראשון)'];
+    if (a.byCat.salary.count) d.push('תלושי שכר והסכם העסקה לגבי תנועות סווגו כשכר');
+    if (a.byCat.dividend.count) d.push('פרוטוקול החלטה על דיבידנד, ניכוי מס במקור, דיווח לרשות המסים');
+    if (a.byCat.expense.count) d.push('חשבוניות וקבלות להחזרי הוצאות');
+    return d;
+  }
+
+  function actions(a) {
+    const e = a.exposure;
+    const act = [];
+    if (a.closing > 0.5) act.push('לרשום ריבית רעיונית ומע"מ לפי נייר העבודה הראשון (פקודת היומן שם).');
+    if (a.review.loanAgreement !== 'yes' && a.closing > 0.5) act.push('לגבש הסכם הלוואה, ולבחון עם היועץ אם ניתן לתעד אותו בדיעבד ואילו השלכות יש לכך.');
+    if (e.undocNet > 0) act.push('לסווג את המשיכות שלא סווגו (סה"כ נטו ' + Number(e.undocNet).toLocaleString('he-IL') + ') להלוואה, דיבידנד או שכר, ולתעד החלטה.');
+    if (a.indicators.some((i) => i.text.indexOf('עיטור') >= 0)) act.push('לבדוק את ההחזר בסוף השנה ואת המשיכה בינואר, ולהחליט על גילוי או תיקון.');
+    act.push('להשלים את הסיווג הידני בטבלת התנועות ולהריץ מחדש את הניתוח.');
+    act.push('לתאם את הסיווג הסופי והחשיפה עם רו"ח / יועץ מס לפני הגשת הדוח.');
+    return act;
+  }
+
+  function analyzeAll(ctx, params) {
+    const out = [];
+    ctx.groups.forEach((g) => g.years.forEach((yb) => out.push({ group: g, yb, a: analyze(g, yb, params) })));
+    return out;
+  }
+
+  return { CATS, classifyRow, analyze, alternatives, documents, actions, analyzeAll, DEFAULT_PARAMS };
+});
+
+</script>
+<script>/* src/lib/export-analysis.js */
+/* נייר עבודה: ניתוח כרטסת בעל מניות (בודק משיכות בעלים). מבנה לפי הסקיל:
+ * תמונת מצב, טבלת תנועות קריטיות, חלופות סיווג, חשיפות מס, מסמכים מומלצים, פעולות תיקון. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./calc.js'), require('./export-common.js'), require('./classify.js'), require('./export-interest.js'));
+  else root.ExportAnalysis = factory(root.Calc, root.ExportCommon, root.Classify, root.ExportInterest);
+})(typeof self !== 'undefined' ? self : this, function (Calc, X, K, EI) {
+  const LAST = 6;
+  const YN = { yes: 'כן', no: 'לא', unknown: 'לא ידוע', na: 'לא רלוונטי', '': 'לא נענה', undefined: 'לא נענה' };
+  const SEV = { high: ['גבוהה', X.COLORS.bad], medium: ['בינונית', X.COLORS.warn], low: ['נמוכה', X.COLORS.sub] };
+
+  function wrapHeight(ws, r, texts, widths) {
+    let lines = 1;
+    texts.forEach((t, i) => {
+      const w = widths[i] || 20;
+      const l = String(t || '').split('\n').reduce((s, part) => s + Math.max(1, Math.ceil(part.length / Math.max(8, w * 1.05))), 0);
+      lines = Math.max(lines, l);
+    });
+    ws.getRow(r).height = Math.max(18, lines * 14 + 4);
+  }
+
+  function writeAnalysisSheet(wb, used, ctx, item, single) {
+    const { group, yb, a } = item;
+    const name = X.sheetName(single ? 'ניתוח כרטסת בעל מניות' : 'ניתוח - ' + group.name + ' ' + yb.year, used);
+    const ws = X.newSheet(wb, name);
+    const W = [16, 38, 16, 16, 24, 50];
+    X.setWidths(ws, W);
+    let r = X.headerBlock(ws, ctx, 'ניתוח כרטסת בעל מניות, שנת ' + yb.year, [
+      'צד קשור: ' + group.name + '   |   סוג: ' + group.typeLabel,
+      'מקור הנתונים: ' + group.ledgers.join(' ; '),
+    ], LAST);
+
+    const kv = (label, value, o) => {
+      ws.getCell(r, 1).value = label; ws.mergeCells(r, 1, r, 2); X.style(ws.getCell(r, 1), { border: true, bold: true });
+      const c = ws.getCell(r, 3); c.value = value; X.style(c, { border: true, fmt: (o && o.fmt) || X.NUM, align: (o && o.align) || 'right', fill: o && o.fill, color: o && o.color, bold: o && o.bold });
+      if (o && o.note) { ws.getCell(r, 4).value = o.note; ws.mergeCells(r, 4, r, LAST); X.style(ws.getCell(r, 4), { italic: true, size: 9, wrap: true }); }
+      r++;
+      return r - 1;
+    };
+    const side = (v) => (v > 0.5 ? ' (חובה)' : v < -0.5 ? ' (זכות)' : '');
+
+    // 1. תמונת מצב
+    X.sectionTitle(ws, r++, '1. תמונת מצב', LAST);
+    kv('יתרת פתיחה', Calc.round2(a.opening), { note: side(a.opening) });
+    kv('יתרת סגירה', Calc.round2(a.closing), { note: side(a.closing) });
+    kv('שיא יתרת חובה בשנה', Calc.round2(a.peakD.value), { note: a.peakD.date ? 'בתאריך ' + Calc.fmtDate(a.peakD.date) : '' });
+    kv('שיא יתרת זכות בשנה', Calc.round2(a.peakC.value), { note: a.peakC.date ? 'בתאריך ' + Calc.fmtDate(a.peakC.date) : '' });
+    kv('חודשים בסוף החודש ביתרת חובה', a.monthsDebit, { fmt: '0' });
+    kv('חודשים בסוף החודש ביתרת זכות', a.monthsCredit, { fmt: '0' });
+    kv('יתרה יומית ממוצעת', Calc.round2(a.avgBalance));
+    kv('סה"כ חובות בשנה', a.totalDebits);
+    kv('סה"כ זכויות בשנה', a.totalCredits);
+    kv('מספר תנועות', a.rows.length, { fmt: '0' });
+    r++;
+    X.sectionTitle(ws, r++, 'שאלות סקירה ותשובות', LAST);
+    kv('קיים הסכם הלוואה כתוב?', YN[a.review.loanAgreement], { align: 'center', fmt: '@', fill: a.review.loanAgreement === 'yes' ? undefined : X.COLORS.warn });
+    kv('שולמה ריבית על היתרה?', YN[a.review.interestPaid], { align: 'center', fmt: '@' });
+    kv('בוצעו קיזוזים / החזרים / חלוקות?', YN[a.review.offsets], { align: 'center', fmt: '@' });
+    kv('לבעל המניות שליטה בחברה?', YN[a.review.controlling], { align: 'center', fmt: '@' });
+    kv('קיימת החלטה מתועדת על דיבידנד?', YN[a.review.dividendDecision], { align: 'center', fmt: '@' });
+    r++;
+
+    // אינדיקטורים
+    X.sectionTitle(ws, r++, 'ממצאים ואינדיקטורים (אין בהם קביעה נחרצת, אלא נקודות לבירור)', LAST);
+    if (!a.indicators.length) { ws.getCell(r, 1).value = 'לא זוהו אינדיקטורים חריגים לפי הנתונים שהוזנו.'; ws.mergeCells(r, 1, r, LAST); X.style(ws.getCell(r, 1), { italic: true }); r++; }
+    a.indicators.forEach((i) => {
+      ws.getCell(r, 1).value = 'רמה: ' + SEV[i.sev][0]; X.style(ws.getCell(r, 1), { border: true, bold: true, fill: SEV[i.sev][1], align: 'center' });
+      ws.getCell(r, 2).value = i.text; ws.mergeCells(r, 2, r, LAST); X.style(ws.getCell(r, 2), { border: true, wrap: true });
+      wrapHeight(ws, r, ['', i.text], [16, 130]);
+      r++;
+    });
+    r++;
+
+    // 2. סיווג
+    X.sectionTitle(ws, r++, '2. פילוח תנועות לפי סיווג (הסיווג האוטומטי ניתן לשינוי בכלי)', LAST);
+    X.tableHeader(ws, r, ['סיווג', '', 'מס\' תנועות', 'חובה', 'זכות', 'נטו (חובה פחות זכות)']);
+    ws.mergeCells(r, 1, r, 2);
+    r++;
+    const catFirst = r;
+    Object.keys(K.CATS).filter((k) => k !== 'opening' && a.byCat[k].count).forEach((k) => {
+      const c = a.byCat[k];
+      ws.getCell(r, 1).value = K.CATS[k]; ws.mergeCells(r, 1, r, 2); X.style(ws.getCell(r, 1), { border: true });
+      ws.getCell(r, 3).value = c.count; X.style(ws.getCell(r, 3), { border: true, fmt: '0', align: 'center' });
+      ws.getCell(r, 4).value = c.debit; X.style(ws.getCell(r, 4), { border: true, fmt: X.NUM });
+      ws.getCell(r, 5).value = c.credit; X.style(ws.getCell(r, 5), { border: true, fmt: X.NUM });
+      ws.getCell(r, 6).value = { formula: `D${r}-E${r}`, result: Calc.round2(c.debit - c.credit) }; X.style(ws.getCell(r, 6), { border: true, fmt: X.NUM });
+      r++;
+    });
+    const catLast = r - 1;
+    ws.getCell(r, 1).value = 'סה"כ'; ws.mergeCells(r, 1, r, 2);
+    ['C', 'D', 'E', 'F'].forEach((col, i) => {
+      const cell = ws.getCell(r, 3 + i);
+      const res = i === 0 ? a.rows.length : i === 1 ? a.totalDebits : i === 2 ? a.totalCredits : Calc.round2(a.totalDebits - a.totalCredits);
+      cell.value = catLast >= catFirst ? { formula: `SUM(${col}${catFirst}:${col}${catLast})`, result: res } : 0;
+    });
+    for (let c = 1; c <= 6; c++) X.style(ws.getCell(r, c), { bold: true, border: true, fill: X.COLORS.total, fmt: c === 3 ? '0' : X.NUM, align: c === 3 ? 'center' : 'right' });
+    r += 2;
+
+    // 3. תנועות קריטיות
+    X.sectionTitle(ws, r++, '3. טבלת תנועות קריטיות (תנועות שסומנו בדגל)', LAST);
+    X.tableHeader(ws, r++, ['תאריך', 'תיאור', 'חובה', 'זכות', 'סיווג', 'דגלים']);
+    if (!a.flagged.length) { ws.getCell(r, 1).value = 'לא נמצאו תנועות עם דגלים.'; ws.mergeCells(r, 1, r, LAST); X.style(ws.getCell(r, 1), { italic: true }); r++; }
+    a.flagged.slice(0, 200).forEach((t) => {
+      const flags = t.flags.map((f) => f.text).join('; ');
+      const vals = [Calc.fmtDate(t.date), t.desc, t.debit || null, t.credit || null, t.catLabel, flags];
+      vals.forEach((v, i) => { const c = ws.getCell(r, i + 1); c.value = v; X.style(c, { border: true, fmt: i === 2 || i === 3 ? X.NUM : undefined, wrap: i === 1 || i === 5 }); });
+      wrapHeight(ws, r, vals, W);
+      r++;
+    });
+    r++;
+
+    // 4. חלופות סיווג
+    X.sectionTitle(ws, r++, '4. חלופות סיווג לתנועות שאינן מתועדות', LAST);
+    X.tableHeader(ws, r, ['חלופה', '', 'יתרונות', '', 'חסרונות', 'חשיפה משוערת והוכחות נדרשות']);
+    ws.mergeCells(r, 1, r, 2); ws.mergeCells(r, 3, r, 4);
+    r++;
+    K.alternatives(a).forEach((alt) => {
+      ws.getCell(r, 1).value = alt.name; ws.mergeCells(r, 1, r, 2); X.style(ws.getCell(r, 1), { border: true, bold: true, wrap: true });
+      ws.getCell(r, 3).value = alt.pros; ws.mergeCells(r, 3, r, 4); X.style(ws.getCell(r, 3), { border: true, wrap: true });
+      ws.getCell(r, 5).value = alt.cons; X.style(ws.getCell(r, 5), { border: true, wrap: true });
+      const last = 'חשיפה: ' + alt.risk + '\nהוכחות: ' + alt.evidence;
+      ws.getCell(r, 6).value = last; X.style(ws.getCell(r, 6), { border: true, wrap: true });
+      wrapHeight(ws, r, [alt.name, alt.pros, alt.cons, last], [32, 32, 24, 50]);
+      r++;
+    });
+    r++;
+
+    // 5. חשיפות
+    X.sectionTitle(ws, r++, '5. חשיפות מס פוטנציאליות (אומדן להמחשה בלבד, תאים צהובים ניתנים לעדכון)', LAST);
+    const e = a.exposure;
+    const base = kv('בסיס לא מתועד (משיכות שלא סווגו נטו אחרי החזרים)', e.undocNet, { note: 'משיכה פרטית + לא מסווג + הלוואה ללא הסכם, פחות החזרים והפקדות' });
+    const inputKv = (label, val) => { const rr = kv(label, val, { fmt: X.PCT, fill: X.COLORS.input, color: 'FF0000FF' }); return rr; };
+    const rDiv = inputKv('שיעור מס דיבידנד (%)', e.dividend.rate);
+    const rSal = inputKv('שיעור מס שולי על שכר (%)', e.salary.rate);
+    const rEmp = inputKv('עלות מעסיק וביטוח לאומי נוספת (%)', e.salary.employer);
+    r++;
+    X.tableHeader(ws, r++, ['תרחיש', '', 'סכום בסיס', 'שיעור', 'חשיפה', 'הערה']);
+    ws.mergeCells(r - 1, 1, r - 1, 2);
+    const exLine = (label, baseF, rateF, resF, res, note) => {
+      ws.getCell(r, 1).value = label; ws.mergeCells(r, 1, r, 2); X.style(ws.getCell(r, 1), { border: true, bold: true });
+      ws.getCell(r, 3).value = baseF; X.style(ws.getCell(r, 3), { border: true, fmt: X.NUM });
+      ws.getCell(r, 4).value = rateF; X.style(ws.getCell(r, 4), { border: true, fmt: X.PCT });
+      ws.getCell(r, 5).value = resF === null ? res : { formula: resF, result: res }; X.style(ws.getCell(r, 5), { border: true, fmt: X.NUM0, bold: true, fill: X.COLORS.total });
+      ws.getCell(r, 6).value = note; X.style(ws.getCell(r, 6), { border: true, wrap: true, size: 9 });
+      wrapHeight(ws, r, [label, '', '', '', '', note], [16, 38, 16, 16, 24, 50]);
+      r++;
+    };
+    exLine('הלוואה: ריבית רעיונית + מע"מ (על כל היתרה, בסיס: יתרה יומית ממוצעת)', null, null, null, e.loan.total, 'ריבית ללא מע"מ ' + Calc.round0(e.loan.net).toLocaleString('he-IL') + ' ומע"מ ' + Calc.round0(e.loan.vat).toLocaleString('he-IL') + ', לפי נייר העבודה הראשון');
+    ws.getCell(r - 1, 3).value = Calc.round2(a.avgBalance);
+    exLine('דיבידנד מוסווה: מס דיבידנד', { formula: `C${base}`, result: e.undocNet }, { formula: `C${rDiv}`, result: e.dividend.rate }, `ROUND(C${r}*D${r}/100,0)`, e.dividend.tax, 'לא כולל מס יסף, ריבית והצמדה על חוב מס, וקנסות');
+    exLine('שכר: מס שולי + עלות מעסיק', { formula: `C${base}`, result: e.undocNet }, { formula: `C${rSal}+C${rEmp}`, result: e.salary.rate + e.salary.employer }, `ROUND(C${r}*D${r}/100,0)`, e.salary.tax, 'אומדן גס, ללא גילום ברוטו ובלי מדרגות מס');
+    r++;
+
+    // 6. מסמכים
+    X.sectionTitle(ws, r++, '6. מסמכים מומלצים להכנה', LAST);
+    K.documents(a).forEach((d, i) => { ws.getCell(r, 1).value = i + 1; X.style(ws.getCell(r, 1), { border: true, align: 'center' }); ws.getCell(r, 2).value = d; ws.mergeCells(r, 2, r, LAST); X.style(ws.getCell(r, 2), { border: true, wrap: true }); r++; });
+    r++;
+    X.sectionTitle(ws, r++, '7. פעולות תיקון מוצעות', LAST);
+    K.actions(a).forEach((d, i) => { ws.getCell(r, 1).value = i + 1; X.style(ws.getCell(r, 1), { border: true, align: 'center' }); ws.getCell(r, 2).value = d; ws.mergeCells(r, 2, r, LAST); X.style(ws.getCell(r, 2), { border: true, wrap: true }); wrapHeight(ws, r, ['', d], [16, 130]); r++; });
+    r++;
+    const note = ws.getCell(r, 1);
+    note.value = 'הערה: הניתוח הוא כלי עזר לסקירה. הסיווג האוטומטי מבוסס על מילות מפתח בתיאור התנועה, והחשיפות הן אומדנים להמחשה. הקביעה הסופית באחריות הסוקר, לאחר בירור העובדות והמסמכים, ואין בו קביעה משפטית.';
+    ws.mergeCells(r, 1, r, LAST); X.style(note, { italic: true, size: 9, wrap: true }); ws.getRow(r).height = 32;
+    return ws;
+  }
+
+  function addAnalysisSheets(wb, used, ctx, analyses) {
+    const single = analyses.length === 1;
+    analyses.forEach((it) => writeAnalysisSheet(wb, used, ctx, it, single));
+    // תנועות עם סיווג ודגלים
+    analyses.forEach((it) => it.a.rows.forEach((r) => { r.flagText = r.flags.map((f) => f.text).join('; '); }));
+    const ctxRows = { groups: ctx.groups, company: ctx.company, preparer: ctx.preparer, createdLabel: ctx.createdLabel };
+    EI.writeTransactionsSheet(wb, used, ctxRows, true);
+  }
+
+  function buildAnalysisWorkbook(ExcelJS, ctx, analyses) {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = ctx.preparer || 'כלי בודק משיכות בעלים';
+    wb.created = new Date();
+    wb.calcProperties = { fullCalcOnLoad: true };
+    const used = new Set();
+    addAnalysisSheets(wb, used, ctx, analyses);
+    return { wb, used };
+  }
+
+  return { buildAnalysisWorkbook, addAnalysisSheets, writeAnalysisSheet };
 });
 
 </script>
@@ -978,7 +1383,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function mergedRows(g) {
     const rows = [];
     g.ledgers.forEach((l, li) => {
-      l.rows.forEach((r) => rows.push(Object.assign({}, r, { srcName: l.name + (l.sheetName ? ' / ' + l.sheetName : ''), _ord: li })));
+      l.rows.forEach((r) => rows.push(Object.assign({}, r, { srcName: l.name + (l.sheetName ? ' / ' + l.sheetName : ''), _ord: li, _lid: l.id })));
     });
     rows.sort((a, b) => (a.date == null ? -1e9 : a.date) - (b.date == null ? -1e9 : b.date) || a._ord - b._ord || a.seq - b.seq);
     return rows;
@@ -1008,6 +1413,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         const od = Calc.deriveOpening(rows, year);
         const ov = g.ledgers.map((l) => l.openingOverride && l.openingOverride[year]).find((v) => v != null && v !== '');
         const opening = ov != null ? Number(ov) : od.value;
+        const ysStart = Calc.dayNum(year, 1, 1);
+        const exclBefore = rows.filter((r) => r.excluded && r.date != null && r.date < ysStart).reduce((sum, r) => sum + (r.debit || 0) - (r.credit || 0), 0);
         const rates = ratesFor(state, year);
         const opts = {
           year, opening, rates, debitSection: sec.debitSection, creditSection: sec.creditSection,
@@ -1027,7 +1434,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           if (inYear.length) extClosing = Calc.round2(inYear[inYear.length - 1].extBalance);
         }
         years.push({
-          year, opening, openingSource: ov != null ? 'הוזנה ידנית' : od.source, openingFound: od.found || ov != null,
+          year, opening, openingSource: (ov != null ? 'הוזנה ידנית' : od.source) + (ov == null && Math.abs(exclBefore) > 0.005 ? ' (ללא שורות ריבית שהוחרגו משנים קודמות, סכום ' + Calc.round2(exclBefore).toLocaleString('he-IL') + ')' : ''), openingFound: od.found || ov != null,
           res, cmp, recon, settings: { daysMethod: sec.daysMethod, vatOnDebit: opts.vatOnDebit, grossIncludesVat: sec.grossIncludesVat, bookCreditInterest: !!state.bookCreditInterest },
           rates, excludedRows, excludedNet, extClosing,
         });
@@ -1046,6 +1453,125 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   return { TYPES, ratesFor, missingRates, groupLedgers, mergedRows, yearsInRows, buildContext };
 });
+
+</script>
+<script>/* src/ui-analysis.js */
+/* לשונית "בודק משיכות בעלים וניתוח כרטסת". נטענת לפני ui.js. */
+(function () {
+  'use strict';
+  const { Calc, Classify: K, ExportAnalysis: EA, ExportInterest: EI } = window;
+  const ExcelJS = window.ExcelJS;
+
+  const QUESTIONS = [
+    ['loanAgreement', 'קיים הסכם הלוואה כתוב?', [['unknown', 'לא ידוע'], ['yes', 'כן'], ['no', 'לא']]],
+    ['interestPaid', 'שולמה ריבית על היתרה?', [['unknown', 'לא ידוע'], ['yes', 'כן'], ['no', 'לא']]],
+    ['offsets', 'בוצעו קיזוזים, החזרים או חלוקות?', [['unknown', 'לא ידוע'], ['yes', 'כן'], ['no', 'לא']]],
+    ['controlling', 'לבעל המניות יש שליטה בחברה?', [['unknown', 'לא ידוע'], ['yes', 'כן'], ['no', 'לא']]],
+    ['dividendDecision', 'קיימת החלטה מתועדת על דיבידנד?', [['unknown', 'לא ידוע'], ['yes', 'כן'], ['no', 'לא'], ['na', 'לא רלוונטי']]],
+  ];
+  const SEV = { high: ['גבוהה', 'bad'], medium: ['בינונית', 'warn'], low: ['נמוכה', 'ok'] };
+
+  function render(state, ctx, h) {
+    const { esc, fmt, fmt0 } = h;
+    const p = state.ui.analysisParams;
+    if (!ctx || !ctx.groups.some((g) => g.years.length)) {
+      state._analyses = [];
+      return `<section class="step"><h2><span class="num">1</span> בודק משיכות בעלים</h2><p class="hint">העלה כרטסת בלשונית "ריבית רעיונית", בחר שנת מס ושיעורים, ואז חזור לכאן. הבודק משתמש באותה כרטסת ובאותן הגדרות.</p></section>`;
+    }
+    const analyses = K.analyzeAll(ctx, p);
+    state._analyses = analyses;
+    const params = `<section class="step"><h2><span class="num">1</span> בודק משיכות בעלים וניתוח כרטסת</h2>
+      <p class="hint">הבודק מסווג כל תנועה (שכר, דיבידנד, הלוואה, משיכה פרטית), מסמן תנועות חריגות ומעריך חשיפות. הסיווג האוטומטי מבוסס על מילות מפתח, ותמיד אפשר לתקן אותו ידנית בטבלת התנועות.</p>
+      <div class="grid">
+        <label class="f">משיכה גדולה מ- (ש"ח)<input type="number" data-fid="ap-big" data-ap="bigAmount" value="${p.bigAmount}"></label>
+        <label class="f">שיעור מס דיבידנד %<input type="number" step="0.5" data-fid="ap-div" data-ap="divRate" value="${p.divRate}"><small>25% רגיל, 30% בעל מניות מהותי. לא כולל מס יסף</small></label>
+        <label class="f">מס שולי על שכר %<input type="number" step="0.5" data-fid="ap-sal" data-ap="salaryRate" value="${p.salaryRate}"></label>
+        <label class="f">עלות מעסיק וביטוח לאומי נוספת %<input type="number" step="0.5" data-fid="ap-emp" data-ap="employerRate" value="${p.employerRate}"></label>
+      </div></section>`;
+    const blocks = analyses.map((it, idx) => block(it, idx, state, h)).join('');
+    return params + blocks + `<section class="step"><h2><span class="num">3</span> הורדה</h2>
+      <p class="hint">"ניתוח כרטסת בעל מניות" הוא נייר העבודה השני. "הכול בקובץ אחד" כולל גם את נייר עבודה הריבית הרעיונית, פקודות היומן והבקרות.</p>
+      <div class="actions">
+        <button class="primary big" id="dl-analysis">הורד: ניתוח כרטסת בעל מניות (אקסל)</button>
+        <button class="big" id="dl-all">הורד הכול בקובץ אחד (ריבית + ניתוח)</button>
+      </div></section>`;
+  }
+
+  function block(it, idx, state, h) {
+    const { esc, fmt, fmt0 } = h;
+    const { group, yb, a } = it;
+    const lid = state.ledgers.find((l) => (l.group || l.name) === group.name || l.name === group.name);
+    const lidId = lid ? lid.id : '';
+    const qs = QUESTIONS.map(([k, label, opts]) => `<label class="f">${label}<select data-rv="${lidId}:${k}">${opts.map(([v, t]) => `<option value="${v}" ${(group.review[k] || 'unknown') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>`).join('');
+    const e = a.exposure;
+    const ind = a.indicators.length ? a.indicators.map((i) => `<div class="alert ${SEV[i.sev][1]}"><b>רמה ${SEV[i.sev][0]}:</b> ${esc(i.text)}</div>`).join('') : '<div class="alert ok">לא זוהו אינדיקטורים חריגים לפי הנתונים שהוזנו.</div>';
+    const cats = Object.keys(K.CATS).filter((k) => k !== 'opening' && a.byCat[k].count).map((k) => `<tr><td class="l">${K.CATS[k]}</td><td>${a.byCat[k].count}</td><td>${fmt(a.byCat[k].debit)}</td><td>${fmt(a.byCat[k].credit)}</td><td>${fmt(a.byCat[k].debit - a.byCat[k].credit)}</td></tr>`).join('');
+    const catOpts = (cur) => Object.entries(K.CATS).filter(([k]) => k !== 'opening').map(([k, v]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${v}</option>`).join('');
+    const rowsHtml = a.rows.slice(0, 400).map((r) => `<tr><td>${Calc.fmtDate(r.date)}</td><td class="l">${esc(r.desc)}</td><td>${fmt(r.debit)}</td><td>${fmt(r.credit)}</td><td>${fmt(r.runBal)}</td><td class="l"><select data-cat="${r._lid}:${r.seq}" title="${esc(r.catReason)}">${catOpts(r.cat)}</select>${r.catConf === 'low' || r.catConf === 'none' ? ' <span class="pill warn">לבדוק</span>' : ''}</td><td class="l small">${esc(r.flags.map((f) => f.text).join('; '))}</td></tr>`).join('');
+    const alts = K.alternatives(a).map((x) => `<tr><td class="l"><b>${esc(x.name)}</b></td><td class="l">${esc(x.pros)}</td><td class="l">${esc(x.cons)}</td><td class="l">${esc(x.risk)}<div class="small">${esc(x.evidence)}</div></td></tr>`).join('');
+    return `<section class="step">
+      <h2><span class="num">${2}</span> ${esc(group.name)}, שנת ${yb.year} <span class="pill ok">${esc(group.typeLabel)}</span></h2>
+      <div class="card"><h3>שאלות סקירה</h3><div class="grid">${qs}</div><div class="small">התשובות משפיעות על האינדיקטורים והחשיפות, ונכללות בנייר העבודה.</div></div>
+      <div class="kpis">
+        <div class="kpi"><div class="k">יתרת פתיחה</div><div class="v">${fmt(a.opening)}</div></div>
+        <div class="kpi"><div class="k">יתרת סגירה</div><div class="v">${fmt(a.closing)}</div></div>
+        <div class="kpi"><div class="k">שיא יתרת חובה</div><div class="v">${fmt(a.peakD.value)}</div></div>
+        <div class="kpi"><div class="k">חודשים ביתרת חובה (מתוך 12)</div><div class="v">${a.monthsDebit}</div></div>
+        <div class="kpi"><div class="k">בסיס לא מתועד (נטו)</div><div class="v">${fmt0(e.undocNet)}</div></div>
+        <div class="kpi"><div class="k">תנועות עם דגל</div><div class="v">${a.flagged.length}</div></div>
+      </div>
+      <h3>ממצאים ואינדיקטורים</h3>${ind}
+      <h3>חשיפות מס פוטנציאליות (אומדן להמחשה)</h3>
+      <div class="scroll"><table class="t"><tr><th>תרחיש</th><th>בסיס</th><th>חשיפה</th></tr>
+        <tr><td class="l">הלוואה: ריבית רעיונית ומע"מ (על כל היתרה, בסיס: יתרה יומית ממוצעת)</td><td>${fmt0(a.avgBalance)}</td><td>${fmt0(e.loan.total)}</td></tr>
+        <tr><td class="l">דיבידנד מוסווה (${e.dividend.rate}%)</td><td>${fmt0(e.undocNet)}</td><td>${fmt0(e.dividend.tax)}</td></tr>
+        <tr><td class="l">שכר (${e.salary.rate}% + ${e.salary.employer}% עלות מעסיק)</td><td>${fmt0(e.undocNet)}</td><td>${fmt0(e.salary.tax)}</td></tr></table></div>
+      <details><summary>חלופות סיווג: יתרונות, חסרונות וסיכונים</summary><div class="scroll"><table class="t"><tr><th>חלופה</th><th>יתרונות</th><th>חסרונות</th><th>חשיפה והוכחות</th></tr>${alts}</table></div></details>
+      <details><summary>פילוח לפי סיווג</summary><div class="scroll"><table class="t"><tr><th>סיווג</th><th>תנועות</th><th>חובה</th><th>זכות</th><th>נטו</th></tr>${cats}</table></div></details>
+      <details open><summary>כל התנועות בשנה עם סיווג (אפשר לשנות סיווג ידנית)</summary><div class="scroll" style="max-height:420px;overflow:auto"><table class="t"><tr><th>תאריך</th><th>תיאור</th><th>חובה</th><th>זכות</th><th>יתרה רצה</th><th>סיווג</th><th>דגלים</th></tr>${rowsHtml}</table></div>${a.rows.length > 400 ? '<div class="small">מוצגות 400 תנועות ראשונות, בקובץ האקסל כולן.</div>' : ''}</details>
+      <details><summary>מסמכים מומלצים ופעולות תיקון</summary><b>מסמכים</b><ul>${K.documents(a).map((d) => `<li>${esc(d)}</li>`).join('')}</ul><b>פעולות</b><ul>${K.actions(a).map((d) => `<li>${esc(d)}</li>`).join('')}</ul></details>
+    </section>`;
+  }
+
+  function bind(state, ctx, h) {
+    const $$ = (s) => Array.from(document.querySelectorAll(s));
+    $$('[data-ap]').forEach((el) => el.addEventListener('change', () => { state.ui.analysisParams[el.dataset.ap] = Number(el.value); h.render(); }));
+    $$('[data-rv]').forEach((el) => el.addEventListener('change', () => {
+      const [id, key] = el.dataset.rv.split(':');
+      const l = h.find(id);
+      // הסקירה נשמרת על הכרטסת הראשונה בקבוצה
+      const grp = state.ledgers.filter((x) => (x.group || x.name) === (l.group || l.name));
+      (grp[0] || l).review = Object.assign({}, (grp[0] || l).review, { [key]: el.value });
+      h.render();
+    }));
+    $$('[data-cat]').forEach((el) => el.addEventListener('change', () => {
+      const [id, seq] = el.dataset.cat.split(':');
+      const l = h.find(id);
+      const r = l.rows.find((x) => x.seq === Number(seq));
+      r.catOverride = el.value;
+      h.render();
+    }));
+    const a1 = document.getElementById('dl-analysis');
+    if (a1) a1.addEventListener('click', async () => {
+      try {
+        const { wb } = EA.buildAnalysisWorkbook(ExcelJS, ctx, state._analyses);
+        h.download(await wb.xlsx.writeBuffer(), 'shareholder-ledger-analysis_' + state.years.join('-') + '.xlsx');
+        h.toast('הקובץ ירד');
+      } catch (e) { console.error(e); h.toast('שגיאה ביצירת הקובץ: ' + e.message); }
+    });
+    const a2 = document.getElementById('dl-all');
+    if (a2) a2.addEventListener('click', async () => {
+      try {
+        const { wb, used } = EI.buildInterestWorkbook(ExcelJS, ctx, { skipTransactions: true });
+        EA.addAnalysisSheets(wb, used, ctx, state._analyses);
+        h.download(await wb.xlsx.writeBuffer(), 'audit-workpapers_' + state.years.join('-') + '.xlsx');
+        h.toast('הקובץ ירד');
+      } catch (e) { console.error(e); h.toast('שגיאה ביצירת הקובץ: ' + e.message); }
+    });
+  }
+
+  window.AnalysisUI = { render, bind };
+})();
 
 </script>
 <script>/* src/ui.js */

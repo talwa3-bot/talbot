@@ -44,7 +44,7 @@
   function mergedRows(g) {
     const rows = [];
     g.ledgers.forEach((l, li) => {
-      l.rows.forEach((r) => rows.push(Object.assign({}, r, { srcName: l.name + (l.sheetName ? ' / ' + l.sheetName : ''), _ord: li })));
+      l.rows.forEach((r) => rows.push(Object.assign({}, r, { srcName: l.name + (l.sheetName ? ' / ' + l.sheetName : ''), _ord: li, _lid: l.id })));
     });
     rows.sort((a, b) => (a.date == null ? -1e9 : a.date) - (b.date == null ? -1e9 : b.date) || a._ord - b._ord || a.seq - b.seq);
     return rows;
@@ -74,6 +74,8 @@
         const od = Calc.deriveOpening(rows, year);
         const ov = g.ledgers.map((l) => l.openingOverride && l.openingOverride[year]).find((v) => v != null && v !== '');
         const opening = ov != null ? Number(ov) : od.value;
+        const ysStart = Calc.dayNum(year, 1, 1);
+        const exclBefore = rows.filter((r) => r.excluded && r.date != null && r.date < ysStart).reduce((sum, r) => sum + (r.debit || 0) - (r.credit || 0), 0);
         const rates = ratesFor(state, year);
         const opts = {
           year, opening, rates, debitSection: sec.debitSection, creditSection: sec.creditSection,
@@ -93,7 +95,7 @@
           if (inYear.length) extClosing = Calc.round2(inYear[inYear.length - 1].extBalance);
         }
         years.push({
-          year, opening, openingSource: ov != null ? 'הוזנה ידנית' : od.source, openingFound: od.found || ov != null,
+          year, opening, openingSource: (ov != null ? 'הוזנה ידנית' : od.source) + (ov == null && Math.abs(exclBefore) > 0.005 ? ' (ללא שורות ריבית שהוחרגו משנים קודמות, סכום ' + Calc.round2(exclBefore).toLocaleString('he-IL') + ')' : ''), openingFound: od.found || ov != null,
           res, cmp, recon, settings: { daysMethod: sec.daysMethod, vatOnDebit: opts.vatOnDebit, grossIncludesVat: sec.grossIncludesVat, bookCreditInterest: !!state.bookCreditInterest },
           rates, excludedRows, excludedNet, extClosing,
         });
