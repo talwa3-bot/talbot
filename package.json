@@ -1,0 +1,30 @@
+{
+  "name": "ledgerlens",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "start": "LEDGERLENS_DEMO_AUTH=1 tsx packages/api/src/server.ts",
+    "mcp": "tsx packages/mcp/src/server.ts",
+    "e2e": "tsx tests/e2e/flow.ts",
+    "demo:build": "node scripts/build-demo.mjs",
+    "demo:smoke": "node tests/e2e/demo-smoke.mjs",
+    "demo:samples": "node tests/e2e/demo-samples.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
+    "playwright": "^1.63.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

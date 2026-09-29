@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ledgerlens": {
+      "command": "npx",
+      "args": ["tsx", "packages/mcp/src/server.ts"],
+      "env": { "DATABASE_URL": "postgres://ledger_app:ledger_app_dev@localhost/ledgerlens", "LEDGERLENS_DEMO_AUTH": "1", "LEDGERLENS_USER": "cfo" }
+    }
+  }
+}
