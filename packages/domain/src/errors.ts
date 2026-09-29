@@ -1,0 +1,10 @@
+export type ErrorCode =
+  | "UNAUTHORIZED_SCOPE" | "AMBIGUOUS_PERIOD" | "UNRECONCILED_SOURCE"
+  | "MISSING_FX_RATE" | "STALE_SNAPSHOT" | "INVALID_AMOUNT" | "MIXED_CURRENCY";
+
+export class LedgerError extends Error {
+  constructor(public readonly code: ErrorCode, message: string) {
+    super(message);
+    this.name = "LedgerError";
+  }
+}

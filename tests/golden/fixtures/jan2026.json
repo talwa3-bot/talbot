@@ -1,0 +1,30 @@
+{
+  "tenant_id": "ten_demo",
+  "entity_id": "ent_demo",
+  "currency": "USD",
+  "period": "2026-01",
+  "accounts": {
+    "6000": { "name": "Sales opex", "type": "expense" },
+    "6100": { "name": "Ops opex", "type": "expense" },
+    "6200": { "name": "Unbudgeted opex", "type": "expense" },
+    "4000": { "name": "Revenue", "type": "revenue" }
+  },
+  "actual": [
+    { "source_row_id": "a1", "department": "sales", "account": "6000", "amount_minor": 1200000 },
+    { "source_row_id": "a2", "department": "ops", "account": "6100", "amount_minor": 750000 }
+  ],
+  "plan": [
+    { "source_row_id": "p1", "department": "sales", "account": "6000", "amount_minor": 1000000 },
+    { "source_row_id": "p2", "department": "ops", "account": "6100", "amount_minor": 800000 }
+  ],
+  "expected": {
+    "actual_total_minor": 1950000,
+    "plan_total_minor": 1800000,
+    "variance_minor": 150000,
+    "variance_pct_display": "8.33",
+    "departments": {
+      "sales": { "variance_minor": 200000, "variance_pct_display": "20.00" },
+      "ops": { "variance_minor": -50000, "variance_pct_display": "-6.25" }
+    }
+  }
+}
