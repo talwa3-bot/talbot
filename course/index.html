@@ -1,0 +1,517 @@
+<meta charset="utf-8">
+<title>מסלול חשבת</title>
+<meta name="description" content="קורס מדורג מאפס לחשבת בחברה גדולה, עם קבצי תרגול, מבחנים נעולים ושכבת בינה מלאכותית בכל שלב">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a ledger book. Level rail on the right (RTL), one working page on the left; the yellow "input cell" color marks what the learner does. */
+:root{
+  --paper:#F2F5F3; --sheet:#FFFFFF; --ink:#15252B; --muted:#5A6B70; --rule:#D3DEDA;
+  --ledger:#1F4E5A; --ledger-soft:#E3EEEC; --cell:#FFF1B8; --cell-ink:#5B4500;
+  --ok:#2C7A4B; --ok-soft:#E1F2E7; --bad:#B3261E; --bad-soft:#FBE6E4; --lock:#9AA8AC;
+  --display:"Frank Ruhl Libre", "David", "Times New Roman", serif;
+  --body:"IBM Plex Sans Hebrew", "Arial Hebrew", "Segoe UI", Arial, sans-serif;
+  --mono:"IBM Plex Mono", "Consolas", monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#0E181B; --sheet:#152226; --ink:#E3ECEA; --muted:#98ABAF; --rule:#2A3B40;
+  --ledger:#7CC0CE; --ledger-soft:#1B3035; --cell:#4A3C0A; --cell-ink:#FFE08A;
+  --ok:#6BCB8F; --ok-soft:#153324; --bad:#F08A80; --bad-soft:#3A1A18; --lock:#56666A; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --paper:#0E181B; --sheet:#152226; --ink:#E3ECEA; --muted:#98ABAF; --rule:#2A3B40;
+  --ledger:#7CC0CE; --ledger-soft:#1B3035; --cell:#4A3C0A; --cell-ink:#FFE08A;
+  --ok:#6BCB8F; --ok-soft:#153324; --bad:#F08A80; --bad-soft:#3A1A18; --lock:#56666A; color-scheme:dark }
+
+*{box-sizing:border-box}
+html{direction:rtl}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.7;margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:var(--ledger)}
+:focus-visible{outline:3px solid var(--ledger);outline-offset:2px;border-radius:6px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.25;margin:0}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--sheet);border-bottom:1px solid var(--rule)}
+.top-in{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;background:none;border:0;padding:0}
+.brand b{font-family:var(--display);font-size:1.45rem;font-weight:900;color:var(--ledger)}
+.brand span{color:var(--muted);font-size:.85rem}
+.prog{flex:1;min-width:160px;display:flex;align-items:center;gap:10px}
+.bar{flex:1;height:8px;background:var(--ledger-soft);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ledger);width:0;transition:width .4s}
+.prog small{font-family:var(--mono);color:var(--muted);white-space:nowrap}
+.timer{display:flex;align-items:center;gap:6px;border:1px solid var(--rule);border-radius:99px;padding:3px 4px 3px 12px}
+.timer output{font-family:var(--mono);font-size:.95rem;min-width:3.2em;text-align:center}
+.timer button,.chip-btn{border:0;background:var(--ledger-soft);border-radius:99px;padding:3px 10px;font-size:.85rem}
+.theme{border:1px solid var(--rule);background:none;border-radius:99px;padding:3px 10px;font-size:.85rem}
+
+.wrap{max-width:1200px;margin:0 auto;padding-inline:16px;padding-block:22px 60px;display:grid;grid-template-columns:260px minmax(0,1fr);gap:26px}
+@media (max-width:860px){.wrap{grid-template-columns:minmax(0,1fr)}}
+
+/* level rail */
+.rail{align-self:start;position:sticky;top:78px}
+@media (max-width:860px){.rail{position:static}}
+.rail h2{font-size:.8rem;letter-spacing:.08em;color:var(--muted);font-family:var(--body);font-weight:600;margin:0 0 8px}
+.lv-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+@media (max-width:860px){
+  .lv-list{grid-auto-flow:column;grid-auto-columns:128px;overflow-x:auto;padding-bottom:6px;align-items:stretch}
+  .lv{grid-template-columns:minmax(0,1fr);gap:2px;height:100%;align-content:start;border-color:var(--rule);background:var(--sheet)}
+  .lv .n{text-align:right}
+  .lv .st{justify-self:start}
+}
+.lv{width:100%;display:grid;grid-template-columns:2.2em minmax(0,1fr) auto;gap:8px;align-items:center;text-align:right;border:1px solid transparent;background:none;border-radius:8px;padding:7px 8px}
+.lv:hover{background:var(--ledger-soft)}
+.lv[aria-current="true"]{background:var(--sheet);border-color:var(--rule)}
+.lv .n{font-family:var(--mono);font-size:.85rem;color:var(--muted);text-align:center}
+.lv .t{font-weight:500;font-size:.95rem;line-height:1.3}
+.st{font-size:.72rem;border-radius:99px;padding:1px 8px;white-space:nowrap;font-weight:600}
+.st.pass{background:var(--ok-soft);color:var(--ok)}
+.st.open{background:var(--cell);color:var(--cell-ink)}
+.st.lock{color:var(--lock)}
+.lv.locked .t{color:var(--lock)}
+
+/* page */
+.page{min-width:0}
+.eyebrow{font-family:var(--mono);font-size:.8rem;color:var(--muted);letter-spacing:.04em}
+.page-h h1{font-size:clamp(1.8rem,3.6vw,2.6rem);font-weight:900;margin-top:2px}
+.page-h p.sub{color:var(--muted);margin:.3em 0 0;max-width:62ch}
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.meta span{font-size:.82rem;border:1px solid var(--rule);border-radius:99px;padding:2px 10px;background:var(--sheet)}
+.why{margin-top:16px;padding:12px 16px;background:var(--ledger-soft);border-radius:var(--r);max-width:70ch}
+.why b{color:var(--ledger)}
+
+.tabs{display:flex;gap:4px;margin:22px 0 0;border-bottom:1px solid var(--rule);overflow-x:auto}
+.tab{border:0;background:none;padding:9px 14px;border-bottom:3px solid transparent;white-space:nowrap;color:var(--muted);font-weight:500}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ledger)}
+.tab .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-inline-start:6px;vertical-align:middle}
+.panel{padding-top:20px}
+
+/* reading card: ruled ledger paper */
+.card{background:var(--sheet);border:1px solid var(--rule);border-top:4px double var(--ledger);border-radius:var(--r);padding:20px 24px 18px;max-width:72ch}
+.card h3{font-size:1.45rem;font-weight:700;color:var(--ledger);margin-bottom:8px}
+.card p,.card li{max-width:65ch}
+.card ul,.card ol{padding-inline-start:1.3em;margin:.4em 0}
+.card li{margin:.2em 0}
+.note{font-size:.88rem;color:var(--muted)}
+.formula{font-family:var(--mono);background:var(--cell);color:var(--cell-ink);padding:10px 14px;border-radius:8px;display:inline-block;margin:6px 0;line-height:1.8}
+.code,.code-inline{font-family:var(--mono);direction:ltr;unicode-bidi:isolate}
+.code{display:block;text-align:left;background:var(--paper);border:1px solid var(--rule);padding:8px 12px;border-radius:8px;overflow-x:auto;font-size:.9rem;margin:6px 0}
+.code-inline{background:var(--paper);padding:0 5px;border-radius:4px;font-size:.88rem}
+.je{font-family:var(--mono);font-size:.92rem;border-inline-start:3px solid var(--ledger);padding:4px 12px;margin:8px 0;background:var(--paper);border-radius:0 6px 6px 0;display:inline-block}
+.stack div{padding:3px 10px;font-family:var(--body)}
+.stack .minus{color:var(--muted);padding-inline-start:26px}
+.stack .sum{font-weight:700;border-top:1px solid var(--ink);color:var(--ledger)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.two>div{background:var(--paper);padding:10px 12px;border-radius:8px;min-width:0}
+.buckets{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.buckets span{font-family:var(--mono);font-size:.82rem;padding:3px 10px;border-radius:6px;background:var(--ledger-soft)}
+.buckets span:nth-child(4){background:var(--cell);color:var(--cell-ink)}
+.buckets span:nth-child(5){background:var(--bad-soft);color:var(--bad)}
+.tbl-wrap{overflow-x:auto}
+table.mini{border-collapse:collapse;font-size:.92rem;margin:8px 0;width:100%;background:var(--sheet)}
+table.mini td,table.mini th{border:1px solid var(--rule);padding:6px 9px;text-align:right;vertical-align:top}
+table.mini th{background:var(--ledger);color:var(--sheet);font-weight:600}
+.quote{background:var(--paper);border-inline-start:3px solid var(--ledger);padding:10px 14px;border-radius:0 8px 8px 0;margin:8px 0}
+ol.cols{columns:2 16em}
+details{margin-top:10px;background:var(--ledger-soft);padding:8px 12px;border-radius:8px}
+summary{cursor:pointer;font-weight:600;color:var(--ledger)}
+
+.pager{display:flex;align-items:center;gap:10px;margin-top:14px;max-width:72ch;flex-wrap:wrap}
+.btn{border:1px solid var(--ledger);background:var(--ledger);color:var(--sheet);border-radius:8px;padding:8px 18px;font-weight:600}
+.btn.ghost{background:none;color:var(--ledger)}
+.btn:disabled{opacity:.4;cursor:default}
+.dots{display:flex;gap:5px;flex:1;justify-content:center;flex-wrap:wrap}
+.dots button{width:10px;height:10px;border-radius:50%;border:0;padding:0;background:var(--rule)}
+.dots button.seen{background:var(--ledger);opacity:.45}
+.dots button.cur{background:var(--ledger);opacity:1;transform:scale(1.25)}
+.linkish{background:none;border:0;color:var(--ledger);text-decoration:underline;padding:0;font-size:.9rem}
+
+/* steps */
+.steps{list-style:none;padding:0;margin:0;display:grid;gap:8px;max-width:72ch;counter-reset:s}
+.steps li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start;background:var(--sheet);border:1px solid var(--rule);border-radius:8px;padding:10px 14px}
+.steps input{width:20px;height:20px;margin-top:4px;accent-color:var(--ok)}
+.steps li.done span{color:var(--muted);text-decoration:line-through}
+
+.box{background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);padding:18px 22px;max-width:72ch}
+.box h3{font-size:1.3rem;color:var(--ledger);margin-bottom:6px}
+.files{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.file{display:flex;align-items:center;gap:10px;border:1px solid var(--rule);border-radius:8px;padding:8px 12px;text-decoration:none;color:var(--ink);background:var(--paper)}
+.file .ext{font-family:var(--mono);font-size:.72rem;background:var(--ok);color:var(--sheet);border-radius:4px;padding:1px 6px}
+.file.sol .ext{background:var(--muted)}
+.file small{display:block;color:var(--muted);font-family:var(--mono);font-size:.75rem;direction:ltr;text-align:right}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-inline-end:5px;border:1px solid var(--rule)}
+
+.prompt{position:relative;margin-top:12px}
+.prompt pre{white-space:pre-wrap;font-family:var(--body);font-size:.93rem;background:var(--paper);border:1px dashed var(--ledger);border-radius:8px;padding:14px 16px 14px;margin:0}
+.prompt .copy{position:absolute;top:8px;left:8px}
+.checklist{margin-top:12px}
+.checklist li{margin:.25em 0}
+
+/* quiz */
+.q{background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);padding:14px 18px;max-width:72ch;margin-bottom:10px}
+.q legend{font-weight:600;padding:0;margin-bottom:6px}
+.q fieldset{border:0;margin:0;padding:0;min-width:0}
+.q .qn{font-family:var(--mono);color:var(--muted);margin-inline-end:6px}
+.opt{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:6px 8px;border-radius:6px;cursor:pointer}
+.opt:hover{background:var(--ledger-soft)}
+.opt input{margin-top:6px;accent-color:var(--ledger)}
+.opt.right{background:var(--ok-soft)}
+.opt.wrong{background:var(--bad-soft)}
+.expl{margin-top:6px;font-size:.92rem;padding:6px 10px;border-radius:6px;background:var(--paper)}
+.expl b.ok{color:var(--ok)} .expl b.no{color:var(--bad)}
+.result{max-width:72ch;border-radius:var(--r);padding:16px 20px;margin-bottom:14px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}
+.result.pass{background:var(--ok-soft)} .result.fail{background:var(--bad-soft)}
+.score{font-family:var(--display);font-size:2.6rem;font-weight:900;line-height:1}
+.result.pass .score{color:var(--ok)} .result.fail .score{color:var(--bad)}
+.gate{font-size:.9rem;color:var(--muted);margin:0 0 12px}
+
+/* home */
+.hero{max-width:74ch}
+.hero h1{font-size:clamp(2rem,4.2vw,3rem);font-weight:900}
+.hero h1 em{font-style:normal;background:linear-gradient(transparent 58%,var(--cell) 58%);padding:0 4px}
+.hero p{color:var(--muted);font-size:1.05rem}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:20px}
+.how div{background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);padding:12px 14px;min-width:0}
+.how b{display:block;color:var(--ledger);font-family:var(--display);font-size:1.1rem}
+.how p{margin:.2em 0 0;font-size:.92rem;color:var(--muted)}
+.map{margin-top:26px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.tile{text-align:right;background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);padding:12px 14px;display:grid;gap:4px;min-width:0}
+.tile:hover:not(.locked){border-color:var(--ledger)}
+.tile .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tile .num{font-family:var(--mono);color:var(--muted);font-size:.8rem}
+.tile h3{font-size:1.1rem}
+.tile p{margin:0;font-size:.85rem;color:var(--muted);line-height:1.5}
+.tile.locked{opacity:.6;cursor:not-allowed}
+.honest{margin-top:22px;max-width:74ch;border:1px solid var(--rule);border-inline-start:4px solid var(--ledger);background:var(--sheet);border-radius:0 var(--r) var(--r) 0;padding:12px 16px}
+.lockmsg{max-width:60ch;background:var(--sheet);border:1px dashed var(--lock);border-radius:var(--r);padding:20px}
+.foot{margin-top:40px;font-size:.82rem;color:var(--muted);max-width:74ch}
+.confirm{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <button class="brand" id="homeBtn" type="button"><b>מסלול חשבת</b><span>מאפס ועד חשבת בונה</span></button>
+    <div class="prog" aria-label="התקדמות בקורס"><div class="bar"><i id="progBar"></i></div><small id="progTxt">0 מתוך 13</small></div>
+    <div class="timer" aria-label="טיימר פוקוס">
+      <span aria-hidden="true" style="font-size:.8rem;color:var(--muted)">פוקוס</span>
+      <output id="tOut">25:00</output>
+      <button type="button" id="tGo">התחלה</button>
+      <button type="button" id="tReset" aria-label="איפוס טיימר">↺</button>
+    </div>
+    <button class="theme" id="themeBtn" type="button">מצב תצוגה</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="rail" aria-label="שלבי הקורס">
+    <h2>שלבים</h2>
+    <ul class="lv-list" id="rail"></ul>
+  </nav>
+  <main class="page" id="page"></main>
+</div>
+
+<script src="content1.js"></script>
+<script src="content2.js"></script>
+<script src="content3.js"></script>
+<script>
+(function(){
+  "use strict";
+  var LEVELS = (window.LEVELS || []).slice().sort(function(a,b){return a.id-b.id});
+  var PASS = 80;
+  var REPO = "https://github.com/talwa3-bot/talbot";
+  var BRANCH = "claude/gallant-carson-libb5s";
+  var KEY = "cfo-path-v1";
+
+  /* ---------- state (per-browser convenience; page works without it) ---------- */
+  var S = {passed:{}, best:{}, steps:{}, seen:{}, view:"home", tab:"read", card:0};
+  try { var raw = localStorage.getItem(KEY); if (raw) { var o = JSON.parse(raw); for (var k in o) S[k] = o[k]; } } catch(e) {}
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {} }
+
+  function unlocked(id){ return id === 0 || !!S.passed[id-1]; }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]}); }
+  function fileUrl(name, sol){
+    var rel = "files/" + (sol ? "solutions/" : "") + name;
+    if (location.protocol === "file:") return rel;
+    return REPO + "/raw/" + BRANCH + "/course/" + rel;
+  }
+
+  var page = document.getElementById("page");
+  var rail = document.getElementById("rail");
+
+  /* ---------- rail + progress ---------- */
+  function status(l){
+    if (S.passed[l.id]) return '<span class="st pass">עבר ' + (S.best[l.id]||"") + '</span>';
+    if (unlocked(l.id)) return '<span class="st open">פתוח</span>';
+    return '<span class="st lock">נעול</span>';
+  }
+  function renderRail(){
+    rail.innerHTML = LEVELS.map(function(l){
+      var cur = S.view === "level" && S.level === l.id;
+      return '<li><button type="button" class="lv' + (unlocked(l.id)?"":" locked") + '" data-lv="' + l.id + '" aria-current="' + cur + '">' +
+        '<span class="n">' + String(l.id).padStart(2,"0") + '</span><span class="t">' + esc(l.title) + '</span>' + status(l) + '</button></li>';
+    }).join("");
+    var done = LEVELS.filter(function(l){return S.passed[l.id]}).length;
+    document.getElementById("progBar").style.width = (done / LEVELS.length * 100) + "%";
+    document.getElementById("progTxt").textContent = done + " מתוך " + LEVELS.length + " שלבים";
+  }
+  rail.addEventListener("click", function(e){
+    var b = e.target.closest("[data-lv]"); if (!b) return;
+    openLevel(+b.dataset.lv);
+  });
+
+  /* ---------- home ---------- */
+  function renderHome(){
+    S.view = "home"; save(); renderRail();
+    var next = LEVELS.find(function(l){return unlocked(l.id) && !S.passed[l.id]}) || LEVELS[LEVELS.length-1];
+    page.innerHTML =
+      '<section class="hero"><div class="eyebrow">קורס אישי · 13 שלבים · 9 קבצי תרגול · 135 שאלות</div>' +
+      '<h1>מאפס מוחלט עד <em>חשבת שבונה מערכות</em></h1>' +
+      '<p>כל שלב: כרטיסי קריאה קצרים, תהליך עבודה מדויק, משימה על קובץ אקסל אמיתי, שכבת בינה מלאכותית, ומבחן. השלב הבא נפתח רק אחרי ציון ' + PASS + ' ומעלה.</p>' +
+      '<div class="pager" style="margin-top:6px"><button class="btn" type="button" data-go="' + next.id + '">' + (Object.keys(S.passed).length ? "להמשיך: שלב " + next.id : "להתחיל משלב 0") + '</button></div></section>' +
+      '<div class="how">' +
+        '<div><b>1. קוראים</b><p>כרטיס אחד בכל פעם. שפה פשוטה, דוגמה מספרית בכל רעיון.</p></div>' +
+        '<div><b>2. עושים</b><p>קובץ אקסל עם תאים צהובים למילוי, וקובץ פתרון נפרד לבדיקה.</p></div>' +
+        '<div><b>3. בונים עם AI</b><p>בכל שלב פרומפט מוכן להעתקה ורשימת בדיקה. ככה נבנה תיק העבודות.</p></div>' +
+        '<div><b>4. עוברים מבחן</b><p>10 שאלות עם הסבר לכל תשובה. ' + PASS + ' ומעלה פותח את השלב הבא.</p></div>' +
+      '</div>' +
+      '<div class="honest"><b>לפני שמתחילים, בכנות:</b> ברוב משרות החשב/ת בחברות גדולות נדרשת תעודת רואת חשבון ו-2 עד 5 שנות ניסיון. הקורס נותן ידע, תרגול ויתרון בבניית מערכות ובינה מלאכותית. הוא לא מחליף את התעודה. שלב 0 מסביר את המסלול המלא.</div>' +
+      '<div class="map">' + LEVELS.map(function(l){
+        var lk = !unlocked(l.id);
+        return '<button type="button" class="tile' + (lk?" locked":"") + '" data-go="' + l.id + '"' + (lk?' aria-disabled="true"':"") + '>' +
+          '<div class="row"><span class="num">שלב ' + l.id + ' · ' + esc(l.time) + '</span>' + status(l) + '</div>' +
+          '<h3>' + esc(l.title) + '</h3><p>' + esc(l.subtitle) + '</p></button>';
+      }).join("") + '</div>' +
+      '<p class="foot">ההתקדמות נשמרת בדפדפן הזה בלבד. כל הנתונים בקבצים בדויים. שכר ודרישות משרה מבוססים על חיפוש משרות וטבלאות שכר פומביות בספטמבר 2026, והם משתנים לפי חברה ותקופה.' +
+      ' <span class="confirm" id="resetWrap"><button type="button" class="linkish" id="resetAsk">איפוס כל ההתקדמות</button></span></p>';
+    window.scrollTo(0,0);
+  }
+  page.addEventListener("click", function(e){
+    var g = e.target.closest("[data-go]");
+    if (g) { openLevel(+g.dataset.go); return; }
+    if (e.target.id === "resetAsk") {
+      document.getElementById("resetWrap").innerHTML = 'בטוח? כל הציונים יימחקו. <button type="button" class="btn" id="resetYes" style="padding:3px 12px">כן, לאפס</button><button type="button" class="btn ghost" id="resetNo" style="padding:3px 12px">ביטול</button>';
+      return;
+    }
+    if (e.target.id === "resetYes") { S = {passed:{}, best:{}, steps:{}, seen:{}, view:"home", tab:"read", card:0}; save(); renderHome(); return; }
+    if (e.target.id === "resetNo") { renderHome(); return; }
+  });
+
+  /* ---------- level ---------- */
+  var TABS = [["read","קריאה"],["steps","תהליך"],["task","משימה וקובץ"],["ai","שכבת AI"],["quiz","מבחן"]];
+  function openLevel(id){
+    if (!unlocked(id)) { renderLocked(id); return; }
+    if (S.level !== id) { S.card = 0; S.tab = "read"; }
+    S.view = "level"; S.level = id; save(); renderLevel(); window.scrollTo(0,0);
+  }
+  function renderLocked(id){
+    S.view = "home"; renderRail();
+    var l = LEVELS[id];
+    page.innerHTML = '<div class="lockmsg"><div class="eyebrow">שלב ' + id + '</div><h2>' + esc(l.title) + ' עדיין נעול</h2>' +
+      '<p>השלב נפתח אחרי ציון ' + PASS + ' ומעלה במבחן של שלב ' + (id-1) + ' (' + esc(LEVELS[id-1].title) + '). הבסיס קודם, ואז הקומה הבאה.</p>' +
+      '<button class="btn" type="button" data-go="' + (id-1) + '">למבחן של שלב ' + (id-1) + '</button></div>';
+  }
+  function renderLevel(){
+    renderRail();
+    var l = LEVELS[S.level];
+    var stepsDone = (S.steps[l.id]||[]).filter(Boolean).length;
+    page.innerHTML =
+      '<div class="page-h"><div class="eyebrow">שלב ' + l.id + ' מתוך ' + (LEVELS.length-1) + '</div><h1>' + esc(l.title) + '</h1><p class="sub">' + esc(l.subtitle) + '</p>' +
+      '<div class="meta"><span>זמן משוער: ' + esc(l.time) + '</span><span>' + l.cards.length + ' כרטיסים</span><span>' + stepsDone + '/' + l.steps.length + ' צעדים</span><span>' + (S.passed[l.id] ? "מבחן: עבר (" + S.best[l.id] + ")" : "מבחן: " + l.quiz.length + " שאלות, צריך " + PASS) + '</span></div>' +
+      '<div class="why"><b>למה זה חשוב:</b> ' + esc(l.why) + '</div></div>' +
+      '<div class="tabs" role="tablist">' + TABS.map(function(t){
+        var dot = (t[0]==="quiz" && S.passed[l.id]) ? '<span class="dot" aria-hidden="true"></span>' : "";
+        return '<button type="button" class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (S.tab===t[0]) + '">' + t[1] + dot + '</button>';
+      }).join("") + '</div><div class="panel" id="panel"></div>';
+    renderPanel();
+  }
+  page.addEventListener("click", function(e){
+    var t = e.target.closest("[data-tab]"); if (!t) return;
+    S.tab = t.dataset.tab; save();
+    page.querySelectorAll(".tab").forEach(function(b){ b.setAttribute("aria-selected", b.dataset.tab === S.tab); });
+    renderPanel();
+  });
+
+  function renderPanel(){
+    var l = LEVELS[S.level], p = document.getElementById("panel");
+    if (S.tab === "read") return renderRead(l, p);
+    if (S.tab === "steps") return renderSteps(l, p);
+    if (S.tab === "task") return renderTask(l, p);
+    if (S.tab === "ai") return renderAI(l, p);
+    if (S.tab === "quiz") return renderQuiz(l, p);
+  }
+
+  /* reading: one card at a time */
+  function renderRead(l, p){
+    var i = Math.min(S.card||0, l.cards.length-1);
+    S.seen[l.id] = S.seen[l.id] || {}; S.seen[l.id][i] = 1; save();
+    if (S.showAll) {
+      p.innerHTML = '<p><button type="button" class="linkish" id="oneMode">חזרה לכרטיס אחד בכל פעם</button></p>' +
+        l.cards.map(function(c){ return '<article class="card" style="margin-bottom:12px"><h3>' + esc(c.t) + '</h3><div class="tbl-wrap">' + c.b + '</div></article>'; }).join("") +
+        '<div class="pager"><button class="btn" type="button" data-tabgo="steps">לתהליך העבודה</button></div>';
+      return;
+    }
+    var c = l.cards[i];
+    var dots = l.cards.map(function(_,k){
+      var cls = k===i ? "cur" : (S.seen[l.id][k] ? "seen" : "");
+      return '<button type="button" class="' + cls + '" data-card="' + k + '" aria-label="כרטיס ' + (k+1) + '"></button>';
+    }).join("");
+    var last = i === l.cards.length-1;
+    p.innerHTML = '<article class="card" aria-live="polite"><div class="eyebrow">כרטיס ' + (i+1) + ' מתוך ' + l.cards.length + '</div><h3>' + esc(c.t) + '</h3><div class="tbl-wrap">' + c.b + '</div></article>' +
+      '<div class="pager"><button class="btn ghost" type="button" data-card="' + (i-1) + '"' + (i===0?" disabled":"") + '>הקודם</button>' +
+      '<div class="dots">' + dots + '</div>' +
+      (last ? '<button class="btn" type="button" data-tabgo="steps">סיימתי, לתהליך</button>' : '<button class="btn" type="button" data-card="' + (i+1) + '">הבא</button>') + '</div>' +
+      '<p><button type="button" class="linkish" id="allMode">להציג את כל הכרטיסים ברצף</button></p>';
+  }
+  page.addEventListener("click", function(e){
+    var c = e.target.closest("[data-card]");
+    if (c && !c.disabled) { S.card = +c.dataset.card; save(); renderPanel(); document.getElementById("panel").scrollIntoView({block:"nearest"}); return; }
+    var g = e.target.closest("[data-tabgo]");
+    if (g) { S.tab = g.dataset.tabgo; save(); renderLevel(); document.querySelector(".tabs").scrollIntoView({block:"start"}); return; }
+    if (e.target.id === "allMode") { S.showAll = true; save(); renderPanel(); return; }
+    if (e.target.id === "oneMode") { S.showAll = false; save(); renderPanel(); return; }
+  });
+
+  /* steps */
+  function renderSteps(l, p){
+    var st = S.steps[l.id] || [];
+    p.innerHTML = '<p class="gate">סמני כל צעד כשסיימת. זה נשמר. מותר לעצור באמצע ולחזור מחר.</p><ol class="steps">' +
+      l.steps.map(function(s,k){
+        return '<li class="' + (st[k]?"done":"") + '"><input type="checkbox" id="st-' + l.id + '-' + k + '" data-step="' + k + '"' + (st[k]?" checked":"") + '><label for="st-' + l.id + '-' + k + '"><span><b>' + (k+1) + '.</b> ' + esc(s) + '</span></label></li>';
+      }).join("") + '</ol><div class="pager"><button class="btn" type="button" data-tabgo="task">למשימה</button></div>';
+  }
+  page.addEventListener("change", function(e){
+    var s = e.target.closest("[data-step]"); if (!s) return;
+    var l = LEVELS[S.level]; S.steps[l.id] = S.steps[l.id] || [];
+    S.steps[l.id][+s.dataset.step] = s.checked; save();
+    s.closest("li").classList.toggle("done", s.checked);
+  });
+
+  /* task + files */
+  function renderTask(l, p){
+    var t = l.task, files = "";
+    if (t.file) {
+      files = '<div class="files">' +
+        '<a class="file" href="' + fileUrl(t.file) + '" target="_blank" rel="noopener"><span class="ext">XLSX</span><span>קובץ תרגול<small>' + esc(t.file) + '</small></span></a>' +
+        (t.solution ? '<a class="file sol" href="' + fileUrl(t.solution, true) + '" target="_blank" rel="noopener"><span class="ext">פתרון</span><span>לפתוח רק אחרי שניסית<small>' + esc(t.solution) + '</small></span></a>' : "") +
+        '</div><div class="legend"><span><i style="background:#1F4E5A"></i>כותרת: נתון קבוע</span><span><i style="background:#FFF4CC"></i>תא צהוב: כאן ממלאים</span><span><i style="background:#E2F0D9"></i>תא ירוק: פתרון</span></div>' +
+        '<p class="note">הקבצים נמצאים במאגר הגיטהאב בתיקייה course/files. הקישור נפתח בלשונית חדשה ומוריד את הקובץ.</p>';
+    }
+    p.innerHTML = '<section class="box"><h3>' + esc(t.title) + '</h3><div class="tbl-wrap">' + t.text + '</div>' + files + '</section>' +
+      '<div class="pager"><button class="btn" type="button" data-tabgo="ai">לשכבת ה-AI</button></div>';
+  }
+
+  /* AI layer */
+  function renderAI(l, p){
+    var a = l.ai;
+    p.innerHTML = '<section class="box"><h3>' + esc(a.title) + '</h3>' + a.text +
+      '<div class="prompt"><pre id="promptTxt">' + esc(a.prompt) + '</pre><button type="button" class="chip-btn copy" id="copyBtn">העתקה</button></div>' +
+      '<h4 style="margin:16px 0 0">איך בודקים את התוצאה</h4><ul class="checklist">' + a.check.map(function(c){return "<li>" + esc(c) + "</li>"}).join("") + '</ul>' +
+      '<p class="note">כלל ברזל: נתונים אמיתיים של חברה נכנסים רק לכלי שהחברה אישרה. בתרגול משתמשים בנתונים הבדויים של הקורס.</p></section>' +
+      '<div class="pager"><button class="btn" type="button" data-tabgo="quiz">למבחן</button></div>';
+  }
+  page.addEventListener("click", function(e){
+    if (e.target.id !== "copyBtn") return;
+    var txt = document.getElementById("promptTxt").textContent, btn = e.target;
+    function selectIt(){ var r = document.createRange(); r.selectNodeContents(document.getElementById("promptTxt")); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "הטקסט מסומן, העתיקי ידנית"; }
+    try {
+      navigator.clipboard.writeText(txt).then(function(){ btn.textContent = "הועתק"; setTimeout(function(){btn.textContent="העתקה"}, 1800); }, selectIt);
+    } catch(err) { selectIt(); }
+  });
+
+  /* quiz */
+  var quizOrder = {}, optOrders = {};
+  function optOrder(lid, qi, n){
+    var k = lid + ":" + qi;
+    if (!optOrders[k]) optOrders[k] = shuffle(n);
+    return optOrders[k];
+  }
+  function shuffle(n){ var a = []; for (var i=0;i<n;i++) a.push(i); for (var j=n-1;j>0;j--){ var r = Math.floor(Math.random()*(j+1)); var t=a[j];a[j]=a[r];a[r]=t; } return a; }
+  function renderQuiz(l, p, result){
+    if (!quizOrder[l.id]) quizOrder[l.id] = l.quiz.map(function(_,i){return i});
+    var order = quizOrder[l.id], need = Math.ceil(l.quiz.length * PASS / 100);
+    var head = '<p class="gate">' + l.quiz.length + ' שאלות. צריך לפחות ' + need + ' נכונות (' + PASS + '). אחרי ההגשה תראי הסבר לכל שאלה.' +
+      (l.id < LEVELS.length-1 ? ' ציון עובר פותח את שלב ' + (l.id+1) + '.' : ' זה המבחן המסכם של כל הקורס.') + '</p>';
+    var res = "";
+    if (result) {
+      var pass = result.pct >= PASS;
+      res = '<div class="result ' + (pass?"pass":"fail") + '" tabindex="-1" id="res"><div class="score">' + result.pct + '</div><div>' +
+        (pass ? '<b>עברת!</b> ' + result.right + ' מתוך ' + l.quiz.length + '. ' + (l.id < LEVELS.length-1 ? 'שלב ' + (l.id+1) + ' נפתח.' : 'סיימת את הקורס. עכשיו לעבודה ולתיק העבודות.') :
+                '<b>עוד לא.</b> ' + result.right + ' מתוך ' + l.quiz.length + '. קראי את ההסברים למטה, חזרי לכרטיסים הרלוונטיים, ונסי שוב. זה בדיוק איך לומדים.') +
+        '<div class="pager" style="margin-top:8px">' + (pass && l.id < LEVELS.length-1 ? '<button class="btn" type="button" data-go="' + (l.id+1) + '">לשלב ' + (l.id+1) + '</button>' : '') +
+        '<button class="btn ghost" type="button" id="retake">מבחן מחדש</button></div></div></div>';
+    }
+    p.innerHTML = head + res + '<form id="quizForm" novalidate>' + order.map(function(qi, n){
+      var q = l.quiz[qi], ans = result ? result.answers[qi] : undefined;
+      return '<div class="q"><fieldset><legend><span class="qn">' + (n+1) + '.</span>' + esc(q.q) + '</legend>' +
+        optOrder(l.id, qi, q.o.length).map(function(oi){
+          var o = q.o[oi], cls = "";
+          if (result) { if (oi === q.a) cls = " right"; else if (oi === ans) cls = " wrong"; }
+          return '<label class="opt' + cls + '"><input type="radio" name="q' + qi + '" value="' + oi + '"' + (ans===oi?" checked":"") + (result?" disabled":"") + '><span>' + esc(o) + '</span></label>';
+        }).join("") +
+        (result ? '<div class="expl">' + (ans === q.a ? '<b class="ok">נכון.</b> ' : '<b class="no">' + (ans === undefined ? "לא נענתה." : "לא נכון.") + '</b> התשובה: ' + esc(q.o[q.a]) + '. ') + esc(q.e) + '</div>' : '') +
+        '</fieldset></div>';
+    }).join("") + (result ? "" : '<div class="pager"><button class="btn" type="submit">הגשה ובדיקה</button><span class="note" id="unans"></span></div>') + '</form>';
+    if (result) { var r = document.getElementById("res"); r && r.focus(); r && r.scrollIntoView({block:"start"}); }
+  }
+  page.addEventListener("submit", function(e){
+    if (e.target.id !== "quizForm") return;
+    e.preventDefault();
+    var l = LEVELS[S.level], fd = new FormData(e.target), answers = {}, right = 0, missing = 0;
+    l.quiz.forEach(function(q, qi){
+      var v = fd.get("q" + qi);
+      if (v === null) { missing++; return; }
+      answers[qi] = +v; if (+v === q.a) right++;
+    });
+    var note = document.getElementById("unans");
+    if (missing && note && note.dataset.warned !== "1") {
+      note.textContent = "יש " + missing + " שאלות בלי תשובה. לחצי שוב על הגשה כדי להגיש בכל זאת.";
+      note.dataset.warned = "1"; return;
+    }
+    var pct = Math.round(right / l.quiz.length * 100);
+    S.best[l.id] = Math.max(S.best[l.id]||0, pct);
+    if (pct >= PASS) S.passed[l.id] = true;
+    save(); renderRail();
+    page.querySelectorAll(".tab").forEach(function(b){
+      if (b.dataset.tab === "quiz" && S.passed[l.id] && !b.querySelector(".dot")) b.insertAdjacentHTML("beforeend", '<span class="dot" aria-hidden="true"></span>');
+    });
+    renderQuiz(l, document.getElementById("panel"), {pct:pct, right:right, answers:answers});
+  });
+  page.addEventListener("click", function(e){
+    if (e.target.id !== "retake") return;
+    var l = LEVELS[S.level]; quizOrder[l.id] = shuffle(l.quiz.length);
+    l.quiz.forEach(function(_, qi){ delete optOrders[l.id + ":" + qi]; });
+    renderQuiz(l, document.getElementById("panel"));
+    document.querySelector(".tabs").scrollIntoView({block:"start"});
+  });
+
+  /* ---------- focus timer (25/5) ---------- */
+  var tLeft = 25*60, tRun = null, tBreak = false;
+  var tOut = document.getElementById("tOut"), tGo = document.getElementById("tGo");
+  function tShow(){ var m = Math.floor(tLeft/60), s = tLeft%60; tOut.textContent = (m<10?"0":"") + m + ":" + (s<10?"0":"") + s; }
+  tGo.addEventListener("click", function(){
+    if (tRun) { clearInterval(tRun); tRun = null; tGo.textContent = "המשך"; return; }
+    tGo.textContent = "עצירה";
+    tRun = setInterval(function(){
+      tLeft--; tShow();
+      if (tLeft <= 0) { tBreak = !tBreak; tLeft = (tBreak?5:25)*60; tOut.style.color = tBreak ? "var(--ok)" : ""; tShow();
+        document.title = tBreak ? "הפסקה! 5 דקות" : "מסלול חשבת"; }
+    }, 1000);
+  });
+  document.getElementById("tReset").addEventListener("click", function(){ clearInterval(tRun); tRun=null; tBreak=false; tLeft=25*60; tOut.style.color=""; tGo.textContent="התחלה"; document.title="מסלול חשבת"; tShow(); });
+
+  /* ---------- theme ---------- */
+  document.getElementById("themeBtn").addEventListener("click", function(){
+    var root = document.documentElement, cur = root.getAttribute("data-theme");
+    var dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.setAttribute("data-theme", dark ? "light" : "dark");
+  });
+  document.getElementById("homeBtn").addEventListener("click", renderHome);
+
+  /* ---------- boot ---------- */
+  if (S.view === "level" && S.level !== undefined && unlocked(S.level)) renderLevel(); else renderHome();
+})();
+</script>
