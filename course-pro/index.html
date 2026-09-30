@@ -219,7 +219,7 @@ table.mini th{background:var(--ledger);color:var(--sheet);font-weight:600}
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]}); }
   function k(id){ return S.track + ":" + id; }
   function idx(id){ for (var i=0;i<LV.length;i++) if (LV[i].id===id) return i; return 0; }
-  function unlocked(id){ var i = idx(id); return i === 0 || !!S.passed[k(LV[i-1].id)]; }
+  function unlocked(id){ var i = idx(id); return i === 0 || !!S.passed[k(LV[i-1].id)] || !!S.passed[k(id)]; }
   function fileUrl(name, sol){
     var rel = "files/" + (sol ? "solutions/" : "") + name;
     return location.protocol === "file:" ? rel : REPO + "/raw/" + BRANCH + "/course-pro/" + rel;
@@ -258,7 +258,7 @@ table.mini th{background:var(--ledger);color:var(--sheet);font-weight:600}
     var next = LV.find(function(l){ return unlocked(l.id) && !S.passed[k(l.id)]; }) || LV[LV.length-1];
     var started = LV.some(function(l){ return S.passed[k(l.id)]; });
     page.innerHTML =
-      '<section class="hero"><div class="eyebrow">מסלול מתקדם · 10 שלבים · 2 מסלולים · 12 קבצי תרגול עם בדיקה מיידית</div>' +
+      '<section class="hero"><div class="eyebrow">מסלול מתקדם · 11 שלבים (0 עד 10) · 2 מסלולים · 12 קבצי תרגול עם בדיקה מיידית</div>' +
       '<h1>ממבקרת בביג 4 <em>לחשבת שבונה</em> בחברת ענק</h1>' +
       '<p>לא מלמדים כאן חשבונאות. את כבר יודעת. מלמדים את המעבר: לעשות במקום לבדוק, להוביל במקום לדגום, ולבנות תהליכים שחוסכים זמן ועוברים ביקורת.</p></section>' +
       '<div class="tracks">' + ["tech","ind"].map(function(t){
@@ -267,7 +267,7 @@ table.mini th{background:var(--ledger);color:var(--sheet);font-weight:600}
           '<span class="pick">' + (S.track===t ? "המסלול הפעיל" : "לבחור במסלול הזה") + '</span><h3>' + esc(x.name) + '</h3>' +
           '<p><b>' + esc(x.company) + '.</b> ' + esc(x.blurb) + '</p><div class="tags">' + x.tags.map(function(g){return "<span>" + esc(g) + "</span>"}).join("") + '</div></button>';
       }).join("") + '</div>' +
-      '<div class="pager"><button class="btn" type="button" data-go="' + next.id + '">' + (started ? "להמשיך: שלב " + next.id : "להתחיל בשלב 1") + '</button></div>' +
+      '<div class="pager"><button class="btn" type="button" data-go="' + next.id + '">' + (started ? "להמשיך: שלב " + next.id : "להתחיל בשלב 0") + '</button></div>' +
       '<div class="how">' +
         '<div><b>בשורה אחת</b><p>כל שלב נפתח במשפט אחד שצריך לזכור. אם אין זמן, לפחות אותו.</p></div>' +
         '<div><b>חתיכות של 20 דקות</b><p>כל שלב מחולק לחתיכות קטנות עם סימון. מותר לעצור ולחזור מחר.</p></div>' +
@@ -297,7 +297,7 @@ table.mini th{background:var(--ledger);color:var(--sheet);font-weight:600}
     var v = view(LV[idx(S.level)]), l = v.l;
     var sd = (S.steps[k(l.id)]||[]).filter(Boolean).length;
     page.innerHTML =
-      '<div class="page-h"><div class="eyebrow">שלב ' + l.id + ' מתוך ' + LV.length + '</div><h1>' + esc(l.title) + '</h1><p class="sub">' + esc(l.subtitle) + '</p>' +
+      '<div class="page-h"><div class="eyebrow">שלב ' + l.id + ' מתוך ' + LV[LV.length-1].id + '</div><h1>' + esc(l.title) + '</h1><p class="sub">' + esc(l.subtitle) + '</p>' +
       '<div class="meta"><span class="trk">' + esc(TR[S.track].name) + '</span><span>' + esc(l.time) + '</span><span>' + v.cards.length + ' כרטיסים</span><span>' + sd + '/' + l.steps.length + ' חתיכות</span><span>' + (S.passed[k(l.id)] ? "מבחן: עבר (" + S.best[k(l.id)] + ")" : "מבחן: " + v.quiz.length + " שאלות, צריך " + PASS) + '</span></div>' +
       '<div class="tldr"><small>בשורה אחת</small>' + esc(l.tldr) + '</div>' +
       '<div class="why"><b>למה זה חשוב:</b> ' + esc(l.why) + '</div></div>' +
