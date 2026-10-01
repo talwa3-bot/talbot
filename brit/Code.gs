@@ -1,5 +1,7 @@
 // Google Apps Script: receives RSVP and appends a row to the sheet.
 const SHEET_ID = '1AMIWLzlNMblPipkByDGLN9qpepJxsFSzaU6ktR0TubY';
+// כתובת המייל שתקבל הודעה על כל אישור הגעה (אפשר כמה, מופרדות בפסיק)
+const NOTIFY_EMAIL = 'PUT_EMAIL_HERE';
 
 function doPost(e) {
   const p = (e && e.parameter) || {};
@@ -11,6 +13,12 @@ function doPost(e) {
     coming ? 'מגיעים' : 'לא מגיעים',
     coming ? Math.max(1, Math.min(30, Number(p.guests) || 1)) : 0
   ]);
+  const guests = coming ? sheet.getRange(sheet.getLastRow(), 4).getValue() : 0;
+  try {
+    MailApp.sendEmail(NOTIFY_EMAIL,
+      'אישור הגעה לברית: ' + p.name,
+      p.name + ' - ' + (coming ? 'מגיעים, ' + guests + ' אורחים' : 'לא מגיעים'));
+  } catch (err) {}
   return ContentService.createTextOutput('ok');
 }
 
