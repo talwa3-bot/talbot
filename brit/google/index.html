@@ -40,6 +40,12 @@ input[type=text]:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 4p
 .go:disabled{opacity:.6}
 .err{color:#b3261e;font-size:14px;min-height:18px;margin-top:10px}
 .thanks{display:none}
+.gift{display:none;margin-top:20px;padding:18px 14px;border-radius:18px;background:var(--ice);border:1px solid #cfe0f2}
+.gift .gt{margin:0 0 12px;font-weight:600;color:var(--navy)}
+.gb{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.gb a{flex:1 1 140px;padding:13px 10px;border-radius:14px;color:#fff;font-weight:600;text-decoration:none;background:linear-gradient(135deg,var(--blue),var(--navy));box-shadow:0 8px 18px rgba(31,95,168,.35)}
+.gb a[hidden]{display:none}
+.sign{font-size:17px;color:var(--navy);margin:0;line-height:1.6}
 .thanks h2{font-family:'Frank Ruhl Libre',serif;font-size:32px;margin:10px 0}
 </style>
 </head>
@@ -91,6 +97,15 @@ input[type=text]:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 4p
   <h2 id="tt"></h2>
   <div class="orn"></div>
   <p class="sub" id="ts"></p>
+  <div class="gift" id="gift">
+   <p class="gt">מי שרוצה לשמח אותנו במתנה</p>
+   <div class="gb">
+    <a id="bitBtn" target="_blank" rel="noopener">מתנה בביט</a>
+    <a id="payboxBtn" target="_blank" rel="noopener">מתנה בפייבוקס</a>
+   </div>
+  </div>
+  <div class="orn"></div>
+  <p class="sign">באהבה,<br><b>משפחת יהלומי</b></p>
  </div>
 </main>
 
@@ -104,22 +119,28 @@ document.querySelectorAll('input[name=status]').forEach(r => r.onchange = () =>
   $('guestsBox').classList.toggle('hide', status() === 'no'));
 
 // קישור אישי: ?name=משפחת+כהן ממלא את השם מראש
+// קישורי תשלום למתנה: הדביקי כאן את הקישור מביט ומפייבוקס (אם ריק, הכפתור לא יופיע)
+const BIT_URL = '';
+const PAYBOX_URL = '';
 const PREFILL = <?!= JSON.stringify(prefill) ?>;
+if (BIT_URL) $('bitBtn').href = BIT_URL; else $('bitBtn').hidden = true;
+if (PAYBOX_URL) $('payboxBtn').href = PAYBOX_URL; else $('payboxBtn').hidden = true;
 if (PREFILL) $('name').value = PREFILL;
 
 function fail() {
   $('err').textContent = 'משהו השתבש, נסו שוב';
   $('go').disabled = false; $('go').textContent = 'שליחת אישור';
 }
-function done(name) {
+function done() {
   $('form').style.display = 'none'; $('thanks').style.display = 'block';
   if (status() === 'yes') {
-    $('tt').textContent = `מחכים לכם, ${name}!`;
+    $('tt').textContent = 'מחכים לכם!';
     $('ts').textContent = `רשמנו ${n} ${n === 1 ? 'אורח' : 'אורחים'}. נתראה בשמחה 💙`;
   } else {
-    $('tt').textContent = `תודה ששיתפתם, ${name}`;
+    $('tt').textContent = 'תודה ששיתפתם';
     $('ts').textContent = 'נחסר אתכם, ונשמח לחגוג יחד בהזדמנות אחרת 💙';
   }
+  if (BIT_URL || PAYBOX_URL) $('gift').style.display = 'block';
 }
 $('f').onsubmit = e => {
   e.preventDefault();
@@ -127,7 +148,7 @@ $('f').onsubmit = e => {
   if (!name) { $('err').textContent = 'נא להזין שם'; return; }
   $('err').textContent = '';
   $('go').disabled = true; $('go').textContent = 'שולח...';
-  google.script.run.withSuccessHandler(() => done(name)).withFailureHandler(fail)
+  google.script.run.withSuccessHandler(done).withFailureHandler(fail)
     .submitRSVP({ name, status: status(), guests: status() === 'yes' ? n : 0 });
 };
 </script>
