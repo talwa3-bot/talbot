@@ -1,7 +1,7 @@
 // Google Apps Script: receives RSVP and appends a row to the sheet.
 const SHEET_ID = '1AMIWLzlNMblPipkByDGLN9qpepJxsFSzaU6ktR0TubY';
 // כתובת המייל שתקבל הודעה על כל אישור הגעה (אפשר כמה, מופרדות בפסיק)
-const NOTIFY_EMAIL = 'PUT_EMAIL_HERE';
+const NOTIFY_EMAIL = 'Yohalomi@gmail.com';
 
 function doPost(e) {
   const p = (e && e.parameter) || {};
