@@ -105,7 +105,7 @@ input[type=text]:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 4p
    </div>
   </div>
   <div class="orn"></div>
-  <p class="sign">באהבה,<br><b>משפחת יהלומי</b></p>
+  <p class="sign"><span id="sg">באהבה,</span><br><b>משפחת יהלומי</b></p>
  </div>
 </main>
 
@@ -137,8 +137,9 @@ function done() {
     $('tt').textContent = 'מחכים לכם!';
     $('ts').textContent = `רשמנו ${n} ${n === 1 ? 'אורח' : 'אורחים'}. נתראה בשמחה 💙`;
   } else {
-    $('tt').textContent = 'תודה ששיתפתם';
-    $('ts').textContent = 'נחסר אתכם, ונשמח לחגוג יחד בהזדמנות אחרת 💙';
+    $('tt').textContent = 'לא נורא';
+    $('ts').textContent = 'נתראה בחגיגה הבאה 💙';
+    $('sg').textContent = 'אוהבים,';
   }
   if (BIT_URL || PAYBOX_URL) $('gift').style.display = 'block';
 }
