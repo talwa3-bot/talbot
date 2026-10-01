@@ -11,6 +11,13 @@ function doGet(e) {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
+// תאימות לדף הישן: מקבל שליחה ישירה ומעביר לאותה פונקציה
+function doPost(e) {
+  const p = (e && e.parameter) || {};
+  submitRSVP({ name: p.name, status: p.status, guests: p.guests });
+  return ContentService.createTextOutput('ok');
+}
+
 // נקרא מהדף בעת שליחה
 function submitRSVP(d) {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
