@@ -121,7 +121,7 @@ document.querySelectorAll('input[name=status]').forEach(r => r.onchange = () =>
 // קישור אישי: ?name=משפחת+כהן ממלא את השם מראש
 // קישורי תשלום למתנה: הדביקי כאן את הקישור מביט ומפייבוקס (אם ריק, הכפתור לא יופיע)
 const BIT_URL = '';
-const PAYBOX_URL = '';
+const PAYBOX_URL = 'https://links.payboxapp.com/4Eb3iLbyS6b';
 const PREFILL = <?!= JSON.stringify(prefill) ?>;
 if (BIT_URL) $('bitBtn').href = BIT_URL; else $('bitBtn').hidden = true;
 if (PAYBOX_URL) $('payboxBtn').href = PAYBOX_URL; else $('payboxBtn').hidden = true;
