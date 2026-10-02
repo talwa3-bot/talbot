@@ -434,3 +434,54 @@ body.chat-side .chat-btn { display: none; }
 .chat-peek.q { border: 3px solid var(--gold); }
 .chat-peek .ans { color: #7a5a00; font-weight: 800; white-space: nowrap; }
 @media (min-width: 820px) { .chat-peek { display: none; } }
+
+/* Comfortable mobile layout: readable content may scroll instead of shrinking. */
+.welcome-note { text-align: center; margin: 0; }
+.install-card { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: center; }
+.install-card img, .install-preview img { border-radius: 16px; }
+.install-card p { margin: 0; }
+.install-card > button, .install-card .offline-status { grid-column: 1 / -1; }
+.offline-status { font-size: .85em; }
+.install-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.install-steps { padding-inline-start: 1.5em; }
+.install-steps li { padding: 8px 0; line-height: 1.6; }
+.sheet .muted { color: #414b44; }
+.sheet input[type=text] { background: #fff; color: #1b1b1b; }
+input:focus-visible { outline: 4px solid #936500; outline-offset: 2px; }
+:root { --pass: #126a37; }
+:root[data-contrast="high"] .seat.turn,
+:root[data-contrast="high"] .slot { animation: none; }
+:root[data-contrast="high"] .felt .seat:not(.turn) { opacity: 1; }
+.card:disabled, .chip:disabled { cursor: default; }
+.confirm { position: sticky; bottom: env(safe-area-inset-bottom, 0px); z-index: 12; padding: 8px; background: #06331d; border-radius: 14px; }
+@media (max-width: 819px) {
+  :root { --cw: clamp(52px, calc((100vw - 72px) / 5), 74px); }
+  .topbar { flex-wrap: wrap; padding: 10px; }
+  .topbar .info { flex: 1 1 100%; flex-wrap: wrap; overflow: visible; font-size: .9em; }
+  .icon-btn { min-width: 56px; min-height: 56px; padding: 8px 14px; font-size: 1em; }
+  .banner.your, .banner.other { font-size: 1em; padding: 10px; }
+  .banner.your small { display: block; font-size: .85em; opacity: 1; }
+  .hand { gap: 8px; padding: 20px 4px 8px; }
+  .felt.bidding .hand { padding-top: 20px; }
+  .chip { min-width: 48px; min-height: 52px; height: auto; font-size: 1.1em; }
+  .dummy .chips { gap: 8px; }
+  .bidbox .b, .calls .b { min-height: 58px; }
+  .calls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .calls .b { font-size: 1em; }
+  .more-levels, .tools .btn, .advice .advice-btn, .advice.shown .btn.primary { min-height: 56px; font-size: 1em; }
+  .advice.shown .advice-t, .advice-sum, .advice.shown .advice-sum { font-size: .9em; }
+  .tricks-count { font-size: 1em; flex-wrap: wrap; }
+  .felt.bidding .auction th { font-size: .85em; overflow-wrap: anywhere; }
+  .auction td { min-height: 44px; }
+  .chat-peek { font-size: .9em; min-height: 56px; }
+  .confirm { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  .confirm .btn { padding: 10px 8px; }
+  .brand h1 { font-size: 1.65em; }
+  .choice { grid-template-columns: 1fr; }
+  .choice .btn { min-height: 64px; flex-direction: row; flex-wrap: wrap; gap: 8px; padding: 10px; }
+  .players { grid-template-columns: 1fr; }
+}
+summary { cursor: pointer; min-height: 56px; padding: 14px 0; font-weight: 700; }
+summary:focus-visible { outline: 4px solid var(--focus); outline-offset: 2px; }
+.tournament-options { margin-top: 12px; }
+.install-card h2 { font-size: 1em; }
