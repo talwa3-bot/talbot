@@ -71,3 +71,10 @@ export function dealBoard(seed, boardNo) {
   const rng = mulberry32((seed * 7919 + boardNo * 104729) >>> 0);
   return dealHands(rng);
 }
+
+// פורמט PBN לפותר: "N:AKQ.JT9.876.5432 ..." (עלה.לב.יהלום.תלתן)
+export function toPbn(hands) {
+  return 'N:' + hands.map((h) => [3, 2, 1, 0].map((s) => h.filter((c) => suitOf(c) === s)
+    .sort((a, b) => rankOf(b) - rankOf(a)).map((c) => (rankOf(c) === 10 ? 'T' : rankLabel(rankOf(c)))).join('')).join('.')).join(' ');
+}
+export const cardCode = (c) => SUIT_LETTER[suitOf(c)] + (rankOf(c) === 10 ? 'T' : rankLabel(rankOf(c)));

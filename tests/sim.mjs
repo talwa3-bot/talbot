@@ -2,15 +2,13 @@
 import fs from 'fs';
 import { initSync, solve_contract } from '../vendor/bridge-solver/bridge_solver_wasm.js';
 import { dealBoard, boardInfo, SUIT_LETTER, rankLabel, suitOf, rankOf } from '../src/engine/cards.js';
+import { toPbn } from '../src/engine/cards.js';
 import { Auction, callText, contractText } from '../src/engine/bidding.js';
 import { chooseCall } from '../src/ai/bid-ai.js';
 import { nsScore } from '../src/engine/scoring.js';
 initSync({ module: fs.readFileSync(new URL('../vendor/bridge-solver/bridge_solver_wasm_bg.wasm', import.meta.url)) });
 
-export function pbn(hands) {
-  return 'N:' + hands.map((h) => [3, 2, 1, 0].map((s) => h.filter((c) => suitOf(c) === s)
-    .sort((a, b) => rankOf(b) - rankOf(a)).map((c) => (rankOf(c) === 10 ? 'T' : rankLabel(rankOf(c)))).join('')).join('.')).join(' ');
-}
+const pbn = toPbn;
 const N = +(process.argv[2] || 300), verbose = process.argv[3] === 'v';
 let made = 0, played = 0, passOut = 0, games = 0, slams = 0, levels = 0, ddPar = 0, errors = 0;
 const strainL = ['C', 'D', 'H', 'S', 'N'], seatL = 'NESW';
