@@ -9,7 +9,7 @@ test('offline install caches every application asset and preserves other apps', 
   const handlers = {}, cached = new Map(), deleted = [];
   const cache = {
     async addAll(paths) {
-      for (const path of paths) { await access(new URL('../' + path, import.meta.url)); cached.set(new URL(path, scope).href, { ok: true, path }); }
+      for (const request of paths) { assert.equal(request.cache, 'reload'); const path = request.url.slice(scope.length); await access(new URL('../' + path, import.meta.url)); cached.set(request.url, { ok: true, path }); }
     },
     async match(request) { return cached.get(new URL(typeof request === 'string' ? request : request.url, scope).href); },
     async put() {},
@@ -17,7 +17,7 @@ test('offline install caches every application asset and preserves other apps', 
   vm.runInNewContext(source, {
     self: { registration: { scope }, addEventListener: (type, handler) => handlers[type] = handler, skipWaiting: async () => {}, clients: { claim: async () => {} } },
     caches: { open: async () => cache, keys: async () => ['unrelated-app', `talbot-bridge:${scope}:v0`], delete: async key => deleted.push(key) },
-    fetch: async () => { throw new Error('offline'); }, Response, URL,
+    fetch: async () => { throw new Error('offline'); }, Response, Request, URL,
   });
   let task;
   handlers.install({ waitUntil(p) { task = p; } }); await task;
