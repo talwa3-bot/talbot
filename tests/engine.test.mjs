@@ -117,3 +117,17 @@ test('כשהאדם מכריז: השותפה משחקת לבד את הדומם (�
   g = new BoardGame({ boardNo: 3, seed: 1, humanSeat: 2, calls, plays: g.plays, partnerPlaysDummy: false });
   assert.deepEqual(g.actor(), { seat: 0, controller: 2, human: true });
 });
+
+test('שיחה: תשובה כנה כששואלים אם הדמויות אמיתיות, והתייעצות על הכרזה', async () => {
+  const { freeReply, bidAdviceText, explainPartnerBid, smallTalk, answerReply, QUESTIONS } = await import('../src/game/chatter.js');
+  const { bid } = await import('../src/engine/bidding.js');
+  const ctx = { me: 'נסיה', names: [{ name: 'רות', flag: '' }, { name: 'א', flag: '' }, { name: 'נסיה', flag: '' }, { name: 'ב', flag: '' }], rng: () => 0.3 };
+  for (const q of ['את רובוט?', 'אתם אנשים אמיתיים?', 'זה מחשב?']) assert.match(freeReply(q, ctx, 0).text, /דמות/);
+  assert.match(freeReply('שלום', ctx, 1).text, /שלום/);
+  const g = new BoardGame({ boardNo: 1, seed: 3, humanSeat: 2 });
+  assert.match(bidAdviceText(bid(1, 2), g.hands[2], ctx), /1♥/);
+  assert.match(explainPartnerBid(bid(1, 4), { lo: 15, hi: 17, len: [2, 2, 2, 2] }, ctx), /15 עד 17/);
+  const st = smallTalk(ctx, Object.keys(QUESTIONS).slice(1));
+  assert.equal(st.qkey, Object.keys(QUESTIONS)[0]);
+  assert.ok(answerReply(st.qkey, 0, ctx, st.seat).text.length > 3);
+});

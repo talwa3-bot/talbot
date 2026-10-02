@@ -1,10 +1,10 @@
 // שמירה לעבודה גם בלי אינטרנט. כל שינוי גרסה מרענן את המטמון.
-const VERSION = 'bridge-v1';
+const VERSION = 'bridge-v2';
 const ASSETS = [
   './', './index.html', './styles.css', './manifest.webmanifest', './icons/icon.svg', './icons/icon-180.png',
   './src/ui/app.js', './src/ai/client.js', './src/ai/worker.js', './src/ai/core.js', './src/ai/bid-ai.js', './src/ai/play-ai.js',
   './src/engine/cards.js', './src/engine/bidding.js', './src/engine/scoring.js', './src/engine/play.js',
-  './src/game/board.js', './src/game/tournament.js',
+  './src/game/board.js', './src/game/tournament.js', './src/game/chatter.js', './src/ui/chat.js',
   './vendor/bridge-solver/bridge_solver_wasm.js', './vendor/bridge-solver/bridge_solver_wasm_bg.wasm',
 ];
 self.addEventListener('install', (e) => {

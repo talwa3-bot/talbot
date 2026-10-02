@@ -5,15 +5,18 @@ import { BoardGame } from '../game/board.js';
 import { createTournament, boardNoAt, opponentsAt, standings, matchpoints, PARTNER, WORLD_PAIRS, LEVELS, levelConfig } from '../game/tournament.js';
 import { chooseCall } from '../ai/bid-ai.js';
 import { ask } from '../ai/client.js';
+import { interpret } from '../ai/bid-ai.js';
+import { createChat } from './chat.js';
+import { eventLines, smallTalk, bidAdviceText, explainPartnerBid, cardAdviceText } from '../game/chatter.js';
 
 const HUMAN = 2; // דרום
 const STORE_KEY = 'talbot.bridge.v1';
 
-/** @typedef {{name:string, scale:number, speed:'slow'|'normal'|'fast', colors:2|4, confirm:boolean, sound:boolean, showHcp:boolean, contrast:'normal'|'high', partnerPlaysDummy:boolean}} Settings */
+/** @typedef {{name:string, scale:number, speed:'slow'|'normal'|'fast', colors:2|4, confirm:boolean, sound:boolean, showHcp:boolean, contrast:'normal'|'high', partnerPlaysDummy:boolean, confirmCards:boolean, partnerAdvice:'always'|'ask'}} Settings */
 /** @type {Settings} */
-const DEFAULTS = { name: 'נסיה', scale: 1.15, speed: 'slow', colors: 2, confirm: true, sound: true, showHcp: false, contrast: 'normal', partnerPlaysDummy: true };
+const DEFAULTS = { name: 'נסיה', scale: 1.15, speed: 'slow', colors: 2, confirm: true, sound: true, showHcp: false, contrast: 'normal', partnerPlaysDummy: true, confirmCards: false, partnerAdvice: 'always' };
 
-/** @type {{settings:Settings, tournament:any, lastBoards:number, lastLevel:string}} */
+/** @type {{settings:Settings, tournament:any, lastBoards:number, lastLevel:string, chat?:any[]}} */
 let store = { settings: { ...DEFAULTS }, tournament: null, lastBoards: 8, lastLevel: 'champion' };
 try {
   const raw = localStorage.getItem(STORE_KEY);
@@ -23,6 +26,110 @@ try {
 if (store.settings.name === 'סבתא') store.settings.name = 'נסיה';
 if (store.tournament && store.tournament.playerName === 'סבתא') store.tournament.playerName = 'נסיה';
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch { /* מצב פרטי */ } }
+
+// ---------- הצ'אט ----------
+function currentNames() {
+  if (store.tournament) return seatNames();
+  return [{ name: PARTNER.name, flag: PARTNER.flag }, { name: '', flag: '' }, { name: store.settings.name, flag: '🇮🇱' }, { name: '', flag: '' }];
+}
+const chat = createChat({
+  getCtx: () => ({ me: store.settings.name, names: currentNames(), rng: Math.random }),
+  persona: (s) => {
+    if (s === 0) return `רות, השותפה של ${store.settings.name}: ישראלית בת 82, חמה, מעודדת ומצחיקה, שחקנית ברידג׳ ותיקה.`;
+    const t = store.tournament, opp = t ? opponentsAt(t, Math.min(t.index, t.boards - 1)) : null;
+    return `${currentNames()[s].name} מ${opp ? opp.country : 'חו״ל'}, שחקן/ית ברידג׳ חביב/ה שיושב/ת מול ${store.settings.name} בטורניר העולמי ומדבר/ת עברית טובה.`;
+  },
+  gameSummary: () => {
+    const t = store.tournament;
+    if (!t) return 'בלובי, לפני טורניר.';
+    const st = t.results.length ? standings(t) : null;
+    return `חלוקה ${Math.min(t.index + 1, t.boards)} מתוך ${t.boards}${st ? `, מקום ${st.findIndex((r) => r.me) + 1} מתוך ${st.length}` : ''}.`;
+  },
+  onChange: () => { if (view === 'table') refreshChatBits(); },
+  load: () => store.chat || [],
+  save: (m) => { store.chat = m; save(); },
+  quick: () => {
+    const q = [];
+    if (view !== 'table' || !game) return q;
+    const a = game.actor();
+    if (a && a.human && (game.phase === 'bidding' || game.phase === 'playing')) q.push({ label: `🤝 ${PARTNER.name}, מה את חושבת?`, act: 'ask-ruth' });
+    if (game.auction.calls.some((c, i) => game.auction.seatOf(i) === 0 && c !== PASS)) q.push({ label: `❓ ${PARTNER.name}, מה הכרזת?`, act: 'ruth-bid' });
+    q.push({ label: '😊 מה שלומכם?', act: 'hello' });
+    return q;
+  },
+  onQuick: (act) => {
+    if (act === 'ask-ruth') consultRuth(true);
+    else if (act === 'ruth-bid') {
+      const calls = game.auction.calls;
+      let idx = -1;
+      calls.forEach((c, i) => { if (game.auction.seatOf(i) === 0 && c !== PASS) idx = i; });
+      const info = interpret(calls.slice(0, idx + 1), game.auction.dealer).info[0];
+      chat.post([{ seat: 0, text: explainPartnerBid(idx >= 0 ? calls[idx] : null, info, chatCtx()) }], { first: 300 });
+    } else if (act === 'hello') chat.say('מה שלומכם?');
+  },
+});
+/** בועת דיבור ליד שחקן (רק ההודעה האחרונה) */
+function bubbleHtml(s) {
+  const bub = chat.bubble(s);
+  if (!bub) return '';
+  const txt = bub.typing ? '<span class="dots"><i></i><i></i><i></i></span>' : esc(bub.text.length > 90 ? bub.text.slice(0, 88) + '…' : bub.text);
+  return `<div class="bubble ${bub.question ? 'q' : ''}" ${bub.question ? 'data-act="chat"' : ''}>${txt}${bub.question ? '<span class="ans">💬 לענות</span>' : ''}</div>`;
+}
+/** בטלפון: ההודעה האחרונה בפס קטן מעל הכפתורים */
+function peekHtml() {
+  if (!narrowLayout.matches) return '';
+  const pk = chat.peek();
+  if (!pk) return '';
+  const n = currentNames()[pk.seat];
+  return `<button class="chat-peek ${pk.question ? 'q' : ''}" data-act="chat"><span>${n.flag} <b>${esc(n.name)}:</b> ${pk.typing ? '<span class="dots"><i></i><i></i><i></i></span>' : esc(pk.text)}</span>${pk.question ? '<span class="ans">💬 לענות</span>' : ''}</button>`;
+}
+const badgeHtml = () => (chat.unread ? `<span class="badge">${chat.unread}</span>` : '');
+/** עדכון חלקי: רק בועות, פס ההודעה ומונה. לא מצייר מחדש קלפים וכפתורים (כדי לא לפספס לחיצה) */
+function refreshChatBits() {
+  document.querySelectorAll('.bubble-slot').forEach((el) => {
+    const s = Number(/** @type {HTMLElement} */ (el).dataset.seat);
+    const html = s !== HUMAN ? bubbleHtml(s) : '';
+    if (el.innerHTML !== html) el.innerHTML = html;
+  });
+  const pk = document.querySelector('.peek-slot');
+  if (pk) { const h = peekHtml(); if (pk.innerHTML !== h) pk.innerHTML = h; }
+  const bd = document.querySelector('.badge-slot');
+  if (bd) bd.innerHTML = badgeHtml();
+}
+// בועות נעלמות אחרי כמה שניות גם בלי הודעה חדשה
+setInterval(() => { if (view === 'table') refreshChatBits(); }, 1500);
+const chatCtx = () => ({ me: store.settings.name, names: currentNames(), rng: Math.random });
+let consultedAt = -1;
+/** רות מתייעצת: בהכרזה מסבירה מה הייתה מכריזה; במשחק מציעה קלף */
+async function consultRuth(asked = false) {
+  if (!game) return;
+  const a = game.actor();
+  if (!a || !a.human) return;
+  if (game.phase === 'bidding') {
+    const c = chooseCall(game.hands[HUMAN], game.auction.calls, game.auction.dealer, game.info.vul);
+    bidAdvice = { call: c, at: game.auction.calls.length };
+    consultedAt = game.auction.calls.length;
+    render();
+    chat.post([{ seat: 0, text: bidAdviceText(c, game.hands[HUMAN], chatCtx()) }], { first: asked ? 200 : 700 });
+  } else if (game.phase === 'playing') {
+    const v = game.playView();
+    const c = await ask('card', { view: v, opts: { seed: 7, maxSamples: 32, timeMs: 1800 } });
+    hintCard = c; render();
+    const tr = game.play.trick;
+    let wins = false;
+    if (tr.length) {
+      const led = suitOf(tr[0].card), trump = game.play.trump;
+      const best = tr.reduce((b, p) => {
+        const bs = suitOf(b.card), ps = suitOf(p.card);
+        if (ps === bs) return rankOf(p.card) > rankOf(b.card) ? p : b;
+        return trump !== null && ps === trump ? p : b;
+      }, tr[0]);
+      const cs = suitOf(c), bs = suitOf(best.card);
+      wins = (cs === bs && rankOf(c) > rankOf(best.card)) || (trump !== null && cs === trump && bs !== trump) || (cs === led && bs === led && rankOf(c) > rankOf(best.card));
+    }
+    chat.post([{ seat: 0, text: cardAdviceText(c, wins, chatCtx()) }], { first: 200 });
+  }
+}
 
 // ---------- מצב ריצה ----------
 let view = 'lobby';
@@ -224,6 +331,7 @@ function renderLobby() {
 function newTournament() {
   store.tournament = createTournament({ boards: store.lastBoards || 8, playerName: store.settings.name, level: store.lastLevel || 'champion' });
   save();
+  chat.reset();
   showRoundIntro(true);
 }
 
@@ -237,7 +345,11 @@ function showRoundIntro(first = false) {
     <p class="big-result">${opp.flag} ${esc(opp.names)}</p>
     <p class="muted" style="color:#555;text-align:center">${esc(opp.country)} · דירוג ${opp.rating + levelConfig(t.level).rating} · רמת ${levelConfig(t.level).name}</p>
     <p>השותפה שלך: ${PARTNER.flag} <b>${PARTNER.name}</b></p>
-    <button class="btn primary big" data-act="go">לשולחן ▶</button>`, () => { closeSheet(); startBoard(); }).dataset.sticky = '1';
+    <button class="btn primary big" data-act="go">לשולחן ▶</button>`, () => {
+    closeSheet(); startBoard();
+    const ctx = chatCtx();
+    chat.post([...(first ? eventLines('tournamentStart', ctx) : []), ...eventLines('roundStart', ctx)], { first: 1500 });
+  }).dataset.sticky = '1';
 }
 
 // =====================================================================
@@ -266,13 +378,18 @@ async function runLoop() {
   while (game && view === 'table' && token === loopToken) {
     if (game.phase === 'done') { await finishBoard(); return; }
     const a = game.actor();
-    if (a.human) { busy = false; render(); chime(); return; }
+    if (a.human) {
+      busy = false; render(); chime();
+      if (game.phase === 'bidding' && store.settings.partnerAdvice !== 'ask' && consultedAt !== game.auction.calls.length) consultRuth();
+      return;
+    }
     busy = true; render();
     if (game.phase === 'bidding') {
       await sleep(thinkMs('bid'));
       if (token !== loopToken) return;
       const c = chooseCall(game.hands[a.seat], game.auction.calls, game.auction.dealer, game.info.vul);
       doCallInternal(c);
+      if (a.seat % 2 === 1 && c !== PASS && Math.random() < 0.12) chat.post(eventLines('oppBid', chatCtx(), { seat: a.seat }), { first: 200 });
     } else {
       const t0 = Date.now();
       const v = game.playView();
@@ -304,6 +421,7 @@ async function doCardInternal(card) {
   saveLive();
   if (r.trickDone) {
     pausedTrick = game.play.history[game.play.history.length - 1];
+    if (pausedTrick.winner === HUMAN && Math.random() < 0.15) chat.post(eventLines('trickWonByHer', chatCtx()), { first: 300 });
     render();
     await sleep(pace().trick);
     pausedTrick = null;
@@ -323,7 +441,7 @@ async function humanCard(c) {
   if (busy || !game || game.phase !== 'playing') return;
   const a = game.actor();
   if (!a.human || !game.play.isLegal(c)) return;
-  if (store.settings.confirm && selected !== c) { selected = c; render(); tick(800, 0.03); return; }
+  if (store.settings.confirmCards && selected !== c) { selected = c; render(); tick(800, 0.03); return; }
   selected = null; busy = true;
   await doCardInternal(c);
   busy = false;
@@ -370,7 +488,7 @@ function renderTable() {
         said = `<span class="said ${c === PASS ? 'p' : ''} ${isNew ? 'pop' : ''}" ${isNew ? animStyle : ''}>${c === PASS ? 'פס' : c === DOUBLE ? 'X' : c === REDOUBLE ? 'XX' : callHtml(c)}</span>`;
       }
     }
-    return `<div class="seat ${vul[sideOf(s)] ? 'vul' : ''} ${turn ? 'turn' : ''}">${turn ? `<span class="turn-ic" aria-label="תור">${a.human ? '👉' : '💭'}</span>` : ''}<span class="flag">${n.flag}</span><span class="nm">${esc(n.name)}</span>${role ? `<span class="role">${role}</span>` : ''}${said}</div>`;
+    return `<div class="seat-wrap"><div class="bubble-slot" data-seat="${s}">${s !== HUMAN ? bubbleHtml(s) : ''}</div><div class="seat ${vul[sideOf(s)] ? 'vul' : ''} ${turn ? 'turn' : ''}">${turn ? `<span class="turn-ic" aria-label="תור">${a.human ? '👉' : '💭'}</span>` : ''}<span class="flag">${n.flag}</span><span class="nm">${esc(n.name)}</span>${role ? `<span class="role">${role}</span>` : ''}${said}</div></div>`;
   };
   const backs = (s) => `<div class="backs" aria-label="${g.play ? g.play.hands[s].length : 13} קלפים">${'<i></i>'.repeat(Math.min(13, play ? play.hands[s].length : 13))}</div>`;
 
@@ -423,6 +541,8 @@ function renderTable() {
 
   // מעגן
   let dock = '';
+  // בטלפון: ההודעה האחרונה בצ'אט בפס קטן (לחיצה פותחת את השיחה)
+  const peek = `<div class="peek-slot">${peekHtml()}</div>`;
   const usTricks = play ? play.won[0] : 0, themTricks = play ? play.won[1] : 0;
   if (g.phase === 'bidding') {
     if (myTurn) dock = `<div class="banner your">${esc(store.settings.name)}, תורך להכריז! 👇</div><div class="bid-area">${advicePanel()}<div class="bid-main">${bidBox()}</div></div>`;
@@ -435,7 +555,7 @@ function renderTable() {
       <span class="muted">${weDeclare ? `צריך ${needed} לקיחות` : `להפלה צריך ${14 - needed}`}</span></div>`;
     if (myTurn) {
       const fromDummy = a.seat !== HUMAN;
-      dock += `<div class="banner your">${esc(store.settings.name)}, ${fromDummy ? 'תורך לשחק קלף מהדומם ⬆' : 'תורך לשחק קלף! 👇'}${store.settings.confirm ? '<br><small class="muted">לחיצה בוחרת, לחיצה שנייה משחקת</small>' : ''}</div>`;
+      dock += `<div class="banner your">${esc(store.settings.name)}, ${fromDummy ? 'תורך לשחק קלף מהדומם ⬆' : 'תורך לשחק קלף! 👇'}${store.settings.confirmCards ? '<br><small class="muted">לחיצה בוחרת, לחיצה שנייה משחקת</small>' : '<br><small class="muted">לוחצים על קלף, והוא יוצא לשולחן</small>'}</div>`;
       if (selected !== null) dock += `<div class="confirm"><button class="btn primary" data-act="play-sel">שחקי ${rankLabel(rankOf(selected))}${SUIT_SYMBOL[suitOf(selected)]}</button><button class="btn" data-act="unsel">ביטול</button></div>`;
     } else if (!a) {
       dock += `<div class="banner"><span class="thinking">סופרים את התוצאות</span></div>`;
@@ -447,6 +567,7 @@ function renderTable() {
       ${myTurn && play.declarer === HUMAN && play.trick.length === 0 && play.history.length < 12 ? '<button class="btn" data-act="claim">✋ כל השאר שלי</button>' : ''}</div>`;
   }
 
+  dock = peek + dock;
   app.innerHTML = `
   <div class="screen-table">
     <header class="topbar">
@@ -457,6 +578,7 @@ function renderTable() {
         ${ct && g.phase !== 'bidding' ? `<span class="pill">חוזה ${contractHtml(ct)}</span>` : ''}
         ${place ? `<span class="pill">🏅 מקום ${place}/${t.field.length + 1}</span>` : ''}
       </div>
+      <button class="icon-btn chat-btn" data-act="chat" aria-label="צ׳אט">💬<span class="badge-slot">${badgeHtml()}</span></button>
       <button class="icon-btn" data-act="menu" aria-label="תפריט">☰</button>
     </header>
     <section class="felt ${g.phase === 'bidding' ? 'bidding' : ''}">
@@ -484,6 +606,7 @@ function renderTable() {
     else if (act === 'play-sel' && selected !== null) humanCard(selected);
     else if (act === 'more') { showAllLevels = true; render(); }
     else if (act === 'menu') openMenu();
+    else if (act === 'chat') chat.toggle();
     else if (act === 'last') showLastTrick();
     else if (act === 'hint') giveHint();
     else if (act === 'advice') { bidAdvice = { call: chooseCall(game.hands[HUMAN], game.auction.calls, game.auction.dealer, game.info.vul), at: game.auction.calls.length }; render(); }
@@ -567,7 +690,7 @@ async function giveHint() {
     busy = true; render();
     const v = game.playView();
     const c = await ask('card', { view: v, opts: { seed: 7, maxSamples: 32, timeMs: 1800 } });
-    busy = false; hintCard = c; selected = store.settings.confirm ? c : null; render();
+    busy = false; hintCard = c; selected = store.settings.confirmCards ? c : null; render();
     toast(`העצה של ${PARTNER.name}: ${rankLabel(rankOf(c))}${SUIT_SYMBOL[suitOf(c)]}`, 3500);
   }
 }
@@ -626,6 +749,14 @@ async function finishBoard() {
   save();
   busy = false;
   showBoardResult(record);
+  const pct = matchpoints([record.ns, ...record.field.map((f) => f.ns)])[0];
+  const ct = record.contract, ctx = chatCtx();
+  const lines = [];
+  if (ct && ct.declarer === HUMAN && record.tricks >= ct.level + 6) lines.push(...eventLines('contractMade', ctx));
+  else if (ct && sideOf(ct.declarer) === 1 && record.tricks < ct.level + 6) lines.push(...eventLines('contractSet', ctx));
+  lines.push(...eventLines('boardEnd', ctx, { pct }));
+  if (!chat.hasPendingQuestion() && Math.random() < 0.6) lines.push(smallTalk(ctx, chat.askedKeys()));
+  chat.post(lines, { first: 1200 });
 }
 
 function resultText(ct, tricks) {
@@ -736,7 +867,9 @@ function openSettings() {
     <div class="setting"><label>קצב השחקנים האחרים</label>${seg('speed', [['slow', 'רגוע'], ['normal', 'רגיל'], ['fast', 'מהיר']])}</div>
     <div class="setting"><label>צבעי הסדרות</label>${seg('colors', [[2, 'קלאסי (2 צבעים)'], [4, '4 צבעים']])}</div>
     <div class="setting"><label>כשאני המכריזה, מי משחקת את הדומם?</label>${seg('partnerPlaysDummy', [[true, 'השותפה לבד'], [false, 'אני (כמו בטורניר)']])}</div>
-    <div class="setting"><label>אישור לפני כל מהלך</label>${seg('confirm', [[true, 'כן (מומלץ)'], [false, 'לא']])}</div>
+    <div class="setting"><label>משחק קלף</label>${seg('confirmCards', [[false, 'לחיצה אחת'], [true, 'שתי לחיצות (בחירה ואישור)']])}</div>
+    <div class="setting"><label>אישור לפני הכרזה</label>${seg('confirm', [[true, 'כן (מומלץ)'], [false, 'לא']])}</div>
+    <div class="setting"><label>רות מתייעצת איתי</label>${seg('partnerAdvice', [['always', 'בכל הכרזה'], ['ask', 'רק כשאני שואלת']])}</div>
     <div class="setting"><label>צלילים</label>${seg('sound', [[true, 'כן'], [false, 'לא']])}</div>
     <div class="setting"><label>להציג ספירת נקודות</label>${seg('showHcp', [[false, 'לא'], [true, 'כן']])}</div>
     <div class="setting"><label>ניגודיות</label>${seg('contrast', [['normal', 'רגילה'], ['high', 'גבוהה']])}</div>
@@ -763,7 +896,8 @@ function openHelp() {
     <ul style="line-height:1.6;padding-inline-start:20px">
       <li>את יושבת בדרום (למטה). השותפה שלך, ${PARTNER.name}, בצפון.</li>
       <li><b>הכרזה:</b> לוחצים על ההכרזה בקופסה ואז על "הכריזי". ירוק = פס, אדום = כפל.</li>
-      <li><b>משחק:</b> לוחצים על קלף כדי להרים אותו, ולוחצים שוב כדי לשחק. קלפים שאסור לשחק מוצגים חיוורים.</li>
+      <li><b>משחק:</b> לוחצים על קלף, והוא יוצא לשולחן. קלפים שאסור לשחק מוצגים חיוורים. (אפשר לבחור בהגדרות שתי לחיצות.)</li>
+      <li><b>💬 שיחה:</b> השחקנים מדברים ליד השולחן. אפשר לענות בכפתורים או לכתוב.</li>
       <li>כשאת המכריזה, ${PARTNER.name} משחקת לבד את הקלפים שלה (הדומם). אפשר לשנות בהגדרות.</li>
       <li><b>💡 עצה</b> מראה מה השותפה הייתה עושה. <b>✋ כל השאר שלי</b> מסיים את החלוקה כשכל הלקיחות שלך.</li>
       <li>הטורניר נשמר אוטומטית. אפשר לסגור ולחזור מתי שרוצים.</li>
@@ -777,6 +911,7 @@ function openHelp() {
 
 // ---------- הפעלה ----------
 applySettings();
+chat.draw();
 if (store.tournament && store.tournament.index >= store.tournament.boards) store.tournament = { ...store.tournament };
 render();
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
