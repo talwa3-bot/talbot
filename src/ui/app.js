@@ -2,7 +2,7 @@
 import { suitOf, rankOf, rankLabel, SUIT_SYMBOL, SEAT_NAME_HE, sortForDisplay, handHcp, sideOf, NT } from '../engine/cards.js';
 import { PASS, DOUBLE, REDOUBLE, bid, isBid, levelOf, strainOf, callText, contractText, STRAIN_SYMBOL } from '../engine/bidding.js';
 import { BoardGame } from '../game/board.js';
-import { createTournament, boardNoAt, opponentsAt, standings, matchpoints, PARTNER, WORLD_PAIRS } from '../game/tournament.js';
+import { createTournament, boardNoAt, opponentsAt, standings, matchpoints, PARTNER, WORLD_PAIRS, LEVELS, levelConfig } from '../game/tournament.js';
 import { chooseCall } from '../ai/bid-ai.js';
 import { ask } from '../ai/client.js';
 
@@ -13,8 +13,8 @@ const STORE_KEY = 'talbot.bridge.v1';
 /** @type {Settings} */
 const DEFAULTS = { name: 'סבתא', scale: 1.15, speed: 'slow', colors: 2, confirm: true, sound: true, showHcp: false, contrast: 'normal' };
 
-/** @type {{settings:Settings, tournament:any, lastBoards:number}} */
-let store = { settings: { ...DEFAULTS }, tournament: null, lastBoards: 8 };
+/** @type {{settings:Settings, tournament:any, lastBoards:number, lastLevel:string}} */
+let store = { settings: { ...DEFAULTS }, tournament: null, lastBoards: 8, lastLevel: 'champion' };
 try {
   const raw = localStorage.getItem(STORE_KEY);
   if (raw) { const s = JSON.parse(raw); store = { ...store, ...s, settings: { ...DEFAULTS, ...(s.settings || {}) } }; }
@@ -139,7 +139,8 @@ function renderLobby() {
   const countries = 40 + (day % 12);
   const sel = store.lastBoards || 8;
   const inProgress = t && t.index < t.boards;
-  const shown = [...WORLD_PAIRS].sort((a, b) => b.rating - a.rating).slice(0, 8);
+  const rOff = levelConfig(store.lastLevel || 'champion').rating;
+  const shown = [...WORLD_PAIRS].sort((a, b) => b.rating - a.rating).slice(0, 8).map((p) => ({ ...p, rating: p.rating + rOff }));
   app.innerHTML = `
   <main class="lobby">
     <div class="brand">
@@ -160,6 +161,11 @@ function renderLobby() {
         ${[[6, 'קצר', '~30 דקות'], [8, 'רגיל', '~45 דקות'], [12, 'ארוך', '~70 דקות']].map(([n, l, d]) =>
           `<button class="btn" data-act="len" data-n="${n}" aria-pressed="${sel === n}"><b>${l}</b><span>${n} חלוקות</span><small>${d}</small></button>`).join('')}
       </div>
+      <h2 style="margin-top:14px">רמת היריבים</h2>
+      <div class="choice" role="group" aria-label="רמת היריבים">
+        ${Object.entries(LEVELS).map(([k, L]) =>
+          `<button class="btn" data-act="lvl" data-l="${k}" aria-pressed="${(store.lastLevel || 'champion') === k}"><b>${L.name}</b><small>${L.desc}</small></button>`).join('')}
+      </div>
       <div style="height:12px"></div>
       <button class="btn ${inProgress ? '' : 'primary'} big" data-act="new">🏆 הצטרפי לטורניר</button>
     </section>
@@ -177,6 +183,7 @@ function renderLobby() {
     if (!b) return;
     const act = b.dataset.act;
     if (act === 'len') { store.lastBoards = Number(b.dataset.n); save(); renderLobby(); }
+    else if (act === 'lvl') { store.lastLevel = b.dataset.l; save(); renderLobby(); }
     else if (act === 'new') {
       if (inProgress) {
         openSheet(`<h2>להתחיל טורניר חדש?</h2><p>הטורניר הנוכחי יימחק.</p>
@@ -190,7 +197,7 @@ function renderLobby() {
 }
 
 function newTournament() {
-  store.tournament = createTournament({ boards: store.lastBoards || 8, playerName: store.settings.name });
+  store.tournament = createTournament({ boards: store.lastBoards || 8, playerName: store.settings.name, level: store.lastLevel || 'champion' });
   save();
   showRoundIntro(true);
 }
@@ -203,7 +210,7 @@ function showRoundIntro(first = false) {
     <h2>${first ? '🏆 ברוכה הבאה לטורניר!' : '🔄 החלפת שולחן'}</h2>
     <p style="font-size:1.1em">סבב ${round} מתוך ${rounds}. היריבים שלך:</p>
     <p class="big-result">${opp.flag} ${esc(opp.names)}</p>
-    <p class="muted" style="color:#555;text-align:center">${esc(opp.country)} · דירוג ${opp.rating}</p>
+    <p class="muted" style="color:#555;text-align:center">${esc(opp.country)} · דירוג ${opp.rating + levelConfig(t.level).rating} · רמת ${levelConfig(t.level).name}</p>
     <p>השותפה שלך: ${PARTNER.flag} <b>${PARTNER.name}</b></p>
     <button class="btn primary big" data-act="go">לשולחן ▶</button>`, () => { closeSheet(); startBoard(); }).dataset.sticky = '1';
 }
@@ -217,7 +224,7 @@ function startBoard() {
   const boardNo = boardNoAt(t, t.index);
   game = new BoardGame({ boardNo, seed: t.seed, humanSeat: HUMAN, calls: t.live?.calls || [], plays: t.live?.plays || [] });
   if (t.live?.claim != null) game.claim(t.live.claim);
-  fieldPromise = ask('field', { seed: t.seed, boardNo, tables: t.field.length });
+  fieldPromise = ask('field', { seed: t.seed, boardNo, tables: t.field.length, level: t.level });
   view = 'table'; selected = null; showAllLevels = false; pausedTrick = null; hintCard = null;
   keepAwake();
   render();
@@ -246,7 +253,8 @@ async function runLoop() {
       const t0 = Date.now();
       const v = game.playView();
       const card = v.legal.length === 1 ? v.legal[0]
-        : await ask('card', { view: v, opts: { seed: game.boardNo * 1000 + game.plays.length, maxSamples: 24, timeMs: 1400 } });
+        : await ask('card', { view: v, opts: { seed: game.boardNo * 1000 + game.plays.length, maxSamples: levelConfig(store.tournament.level).samples, timeMs: levelConfig(store.tournament.level).timeMs,
+          blunder: a.seat % 2 === 1 ? levelConfig(store.tournament.level).blunder : 0 } });
       const wait = p.card - (Date.now() - t0);
       if (wait > 0) await sleep(wait);
       if (token !== loopToken) return;
@@ -485,7 +493,7 @@ async function giveHint() {
   } else if (game.phase === 'playing') {
     busy = true; render();
     const v = game.playView();
-    const c = await ask('card', { view: v, opts: { seed: 7, maxSamples: 24, timeMs: 1400 } });
+    const c = await ask('card', { view: v, opts: { seed: 7, maxSamples: 32, timeMs: 1800 } });
     busy = false; hintCard = c; selected = store.settings.confirm ? c : null; render();
     toast(`העצה של ${PARTNER.name}: ${rankLabel(rankOf(c))}${SUIT_SYMBOL[suitOf(c)]}`, 3500);
   }

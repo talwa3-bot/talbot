@@ -5,6 +5,7 @@ import { Play } from '../engine/play.js';
 import { nsScore } from '../engine/scoring.js';
 import { chooseCall, interpret } from './bid-ai.js';
 import { chooseCard, heuristic } from './play-ai.js';
+import { levelConfig } from '../game/tournament.js';
 
 const STRAIN_L = 'CDHSN', SEAT_L = 'NESW';
 
@@ -15,14 +16,15 @@ function ddNs(solve, hands, strain, leader) {
 
 /**
  * תוצאות השולחנות האחרים באותה חלוקה. בכל שולחן הבוטים מעריכים קצת אחרת.
- * @param {{solve:Function|null, seed:number, boardNo:number, tables:number}} o
+ * @param {{solve:Function|null, seed:number, boardNo:number, tables:number, level?:string}} o
  */
-export function fieldResults({ solve, seed, boardNo, tables }) {
+export function fieldResults({ solve, seed, boardNo, tables, level }) {
+  const L = levelConfig(level);
   const hands = dealBoard(seed, boardNo), bi = boardInfo(boardNo);
   const out = [];
   for (let t = 0; t < tables; t++) {
     const rng = mulberry32(seed * 31 + boardNo * 977 + t * 7);
-    const adj = [0, 1, 2, 3].map(() => Math.round((rng() - 0.5) * 3)); // -1..+1 (לפעמים 2)
+    const adj = [0, 1, 2, 3].map(() => Math.round((rng() - 0.5) * L.fieldSpread)); // סטייה בהערכת היד, לפי הרמה
     const A = new Auction(bi.dealer);
     while (!A.isComplete()) A.add(chooseCall(hands[A.turn], A.calls, A.dealer, bi.vul, { adjust: adj[A.turn] }));
     const ct = A.contract();
@@ -33,7 +35,7 @@ export function fieldResults({ solve, seed, boardNo, tables }) {
       tricks = ct.declarer % 2 === 0 ? ns : 13 - ns;
       // קצת רעש אנושי: לפעמים לקיחה פחות/יותר
       const r = rng();
-      if (r < 0.12 && tricks > 0) tricks--; else if (r > 0.93 && tricks < 13) tricks++;
+      if (r < L.fieldDown && tricks > 0) tricks--; else if (r > 1 - L.fieldUp && tricks < 13) tricks++;
     } else {
       const P = new Play(hands, ct);
       const info = interpret(A.calls, A.dealer).info;

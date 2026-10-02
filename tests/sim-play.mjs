@@ -24,7 +24,7 @@ for (let b = 1; b <= N; b++) {
   while (!P.isDone()) {
     const t = Date.now();
     const c = chooseCard({ seat: P.turn, hands: P.hands, declarer: P.declarer, trump: P.trump, trick: P.trick,
-      history: P.history, legal: P.legalCards(), info }, solver, { seed: b * 100 + P.history.length, maxSamples: 20, timeMs: 800 });
+      history: P.history, legal: P.legalCards(), info }, solver, { seed: b * 100 + P.history.length, maxSamples: (P.turn % 2 === P.declarer % 2) ? +(process.argv[3] || 20) : 24, timeMs: (P.turn % 2 === P.declarer % 2) ? +(process.argv[4] || 800) : 1400 });
     const ms = Date.now() - t; maxMs = Math.max(maxMs, ms); totalMs += ms; moves++;
     P.play(c);
   }

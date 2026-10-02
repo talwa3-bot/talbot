@@ -28,11 +28,13 @@ const controllerOf = (seat, declarer) => (seat === (declarer + 2) % 4 ? declarer
  * בחירת קלף.
  * @param {PlayView} v
  * @param {any} solver  אובייקט Analyzer של הפותר (או null)
- * @param {{maxSamples?:number, timeMs?:number, seed?:number}} [opts]
+ * @param {{maxSamples?:number, timeMs?:number, seed?:number, blunder?:number}} [opts]
  * @returns {number}
  */
 export function chooseCard(v, solver, opts = {}) {
   if (v.legal.length === 1) return v.legal[0];
+  // ברמת מועדון: לפעמים משחק "אנושי" פשוט במקום חישוב מעמיק
+  if (opts.blunder && mulberry32((opts.seed ?? 1) * 7 + 3)() < opts.blunder) return heuristic(v);
   // קלפים שקולים: אם כל החוקיים באותה סדרה ורצופים - לא משנה
   if (solver) {
     try {

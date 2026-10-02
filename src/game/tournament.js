@@ -28,15 +28,27 @@ export const WORLD_PAIRS = [
 export const PARTNER = { name: 'רות', flag: '🇮🇱' };
 
 /**
- * @param {{seed?:number, boards?:number, playerName?:string}} o
+ * רמות היריבים. משפיעות על עומק החשיבה של הבוטים בקלפים ועל חוזק השדה בשולחנות האחרים.
+ * @typedef {'club'|'expert'|'champion'} Level
  */
-export function createTournament({ seed = (Date.now() % 1e9) | 0, boards = 8, playerName = 'סבתא' } = {}) {
+export const LEVELS = {
+  club: { name: 'מועדון', desc: 'יריבים טובים שטועים לפעמים', samples: 6, timeMs: 400, blunder: 0.25, fieldSpread: 4, fieldDown: 0.3, fieldUp: 0.05, rating: -250 },
+  expert: { name: 'מתקדמים', desc: 'יריבים חזקים', samples: 24, timeMs: 1400, blunder: 0, fieldSpread: 3, fieldDown: 0.12, fieldUp: 0.07, rating: 0 },
+  champion: { name: 'אלופים', desc: 'הכי קשה: יריבים ושדה ברמת אליפות', samples: 48, timeMs: 2600, blunder: 0, fieldSpread: 1.6, fieldDown: 0.05, fieldUp: 0.03, rating: 250 },
+};
+/** @param {string} l */
+export const levelConfig = (l) => LEVELS[l] || LEVELS.expert;
+
+/**
+ * @param {{seed?:number, boards?:number, playerName?:string, level?:string}} o
+ */
+export function createTournament({ seed = (Date.now() % 1e9) | 0, boards = 8, playerName = 'סבתא', level = 'champion' } = {}) {
   const rng = mulberry32(seed);
   const pool = [...WORLD_PAIRS];
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
   const rounds = Math.ceil(boards / 2);
   return {
-    seed, boards, playerName,
+    seed, boards, playerName, level,
     startBoard: 1 + Math.floor(rng() * 16),
     opponents: pool.slice(0, rounds),            // יריבים מזרח-מערב בכל סבב
     field: pool.slice(rounds, rounds + 9),       // זוגות צפון-דרום אחרים בשדה

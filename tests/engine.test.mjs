@@ -88,3 +88,16 @@ test('חלוקה שלמה של בוטים: מכרז חוקי ומשחק עד ה�
     assert.deepEqual(copy.result(), g.result());
   }
 });
+
+test('רמות: ברירת מחדל, ומשחק "אנושי" ברמת מועדון', async () => {
+  const { levelConfig, LEVELS } = await import('../src/game/tournament.js');
+  const { chooseCard } = await import('../src/ai/play-ai.js');
+  assert.equal(levelConfig('nope'), LEVELS.expert);
+  assert.ok(LEVELS.champion.samples > LEVELS.expert.samples && LEVELS.expert.samples > LEVELS.club.samples);
+  const g = new BoardGame({ boardNo: 3, seed: 11, humanSeat: -1 });
+  while (g.phase === 'bidding') g.addCall(chooseCall(g.hands[g.auction.turn], g.auction.calls, g.auction.dealer, g.info.vul));
+  if (g.phase === 'playing') {
+    const v = g.playView();
+    assert.equal(chooseCard(v, null, { blunder: 1, seed: 5 }), heuristic(v));
+  }
+});
