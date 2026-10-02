@@ -35,6 +35,8 @@ let loopToken = 0;
 const app = /** @type {HTMLElement} */ (document.getElementById('app'));
 const wideLayout = window.matchMedia('(min-width: 1000px)');
 wideLayout.addEventListener('change', () => { if (view === 'table') render(); });
+/** מספר עם סימן, תמיד משמאל לימין: -450, +1 */
+const num = (n, plus = true) => `<span dir="ltr">${n > 0 && plus ? '+' : ''}${n}</span>`;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const SPEEDS = { slow: { bid: 1100, card: 1200, trick: 2200 }, normal: { bid: 700, card: 750, trick: 1500 }, fast: { bid: 300, card: 350, trick: 900 } };
@@ -548,7 +550,7 @@ async function finishBoard() {
 function resultText(ct, tricks) {
   if (!ct) return 'כולם פס';
   const d = tricks - (ct.level + 6);
-  return d === 0 ? 'בדיוק' : d > 0 ? `+${d}` : `${d}`;
+  return d === 0 ? 'בדיוק' : num(d);
 }
 
 function showBoardResult(r) {
@@ -573,13 +575,13 @@ function showBoardResult(r) {
   openSheet(`
     <h2>סיום חלוקה ${t.index} מתוך ${t.boards}</h2>
     <div class="big-result">${headline}</div>
-    <div class="row center" style="font-size:1.1em">חוזה: <b>${contractHtml(ct)}</b>${ct ? ` · ${seatHe(ct.declarer)} · ${r.tricks} לקיחות (${resultText(ct, r.tricks)})` : ''}</div>
-    <div class="score ${r.ns >= 0 ? 'plus' : 'minus'}">${r.ns > 0 ? '+' : ''}${r.ns}</div>
+    <div class="row center" style="font-size:1.1em">חוזה: <b>${contractHtml(ct)}</b>${ct ? `, מכריז/ה: ${seatHe(ct.declarer)}. ${r.tricks} לקיחות (${resultText(ct, r.tricks)})` : ''}</div>
+    <div class="score ${r.ns >= 0 ? 'plus' : 'minus'}">${num(r.ns)}</div>
     <p style="text-align:center;margin:4px 0"><b>${Math.round(mine)}%</b> מול שאר השולחנות · ${praise}</p>
     <div class="pct-bar"><i style="width:${Math.round(mine)}%"></i></div>
     <h3>מה קרה בשאר השולחנות</h3>
     <table><thead><tr><th>זוג</th><th>חוזה</th><th>תוצאה</th><th>ניקוד</th></tr></thead>
-    <tbody>${rows.map((x) => `<tr class="${x.me ? 'me' : ''}"><td>${x.flag} ${esc(x.names)}</td><td>${contractHtml(x.ct)}${x.ct ? ' ' + seatHe(x.ct.declarer).slice(0, 1) : ''}</td><td>${x.ct ? resultText(x.ct, x.tricks) : ''}</td><td>${x.ns}</td></tr>`).join('')}</tbody></table>
+    <tbody>${rows.map((x) => `<tr class="${x.me ? 'me' : ''}"><td>${x.flag} ${esc(x.names)}</td><td>${contractHtml(x.ct)}${x.ct ? ' ' + seatHe(x.ct.declarer).slice(0, 1) : ''}</td><td>${x.ct ? resultText(x.ct, x.tricks) : ''}</td><td>${num(x.ns, false)}</td></tr>`).join('')}</tbody></table>
     <div style="height:14px"></div>
     <button class="btn primary big" data-act="next">${last ? '🏆 לתוצאות הטורניר' : 'לחלוקה הבאה ▶'}</button>`,
   () => {
