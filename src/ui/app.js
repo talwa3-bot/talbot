@@ -42,8 +42,24 @@ wideLayout.addEventListener('change', () => { if (view === 'table') render(); })
 const num = (n, plus = true) => `<span dir="ltr">${n > 0 && plus ? '+' : ''}${n}</span>`;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const SPEEDS = { slow: { bid: 1100, card: 1200, trick: 2200 }, normal: { bid: 700, card: 750, trick: 1500 }, fast: { bid: 300, card: 350, trick: 900 } };
+// זמני חשיבה (מילישניות, טווח אקראי) כדי שהשחקנים ירגישו אנושיים
+const SPEEDS = {
+  slow: { bid: [1300, 2300], card: [1200, 2200], trick: 2400 },
+  normal: { bid: [800, 1400], card: [800, 1400], trick: 1600 },
+  fast: { bid: [300, 600], card: [350, 650], trick: 900 },
+};
 const pace = () => SPEEDS[store.settings.speed] || SPEEDS.slow;
+/** @param {'bid'|'card'} kind @param {number} [extra] */
+function thinkMs(kind, extra = 0) {
+  const [lo, hi] = pace()[kind];
+  return lo + Math.random() * (hi - lo) + extra;
+}
+/** הפעולה האחרונה, לאנימציה (קלף שעף לשולחן, בועת הכרזה) */
+let fresh = { kind: '', card: -1, idx: -1, at: 0 };
+const FRESH_MS = 650;
+/** @type {{call:number, at:number}|null} */ let bidAdvice = null;
+const narrowLayout = window.matchMedia('(max-width: 819px)');
+narrowLayout.addEventListener('change', () => { if (view === 'table') render(); });
 
 function applySettings() {
   const r = document.documentElement;
@@ -84,6 +100,9 @@ function cardHtml(c, cls = '', attrs = '') {
     <span class="r">${rankLabel(rankOf(c))}</span><span class="s">${SUIT_SYMBOL[s]}</span></button>`;
 }
 function callHtml(c) {
+  return `<span dir="ltr">${callHtmlInner(c)}</span>`;
+}
+function callHtmlInner(c) {
   if (!isBid(c)) return callText(c);
   const st = strainOf(c);
   return `${levelOf(c)}<span class="${st < 4 ? suitClass(st) : ''}" style="${st === 2 ? 'color:var(--red)' : st === 1 ? 'color:var(--diamond)' : st === 0 ? 'color:var(--club)' : ''}">${STRAIN_SYMBOL[st]}</span>`;
@@ -249,9 +268,8 @@ async function runLoop() {
     const a = game.actor();
     if (a.human) { busy = false; render(); chime(); return; }
     busy = true; render();
-    const p = pace();
     if (game.phase === 'bidding') {
-      await sleep(p.bid);
+      await sleep(thinkMs('bid'));
       if (token !== loopToken) return;
       const c = chooseCall(game.hands[a.seat], game.auction.calls, game.auction.dealer, game.info.vul);
       doCallInternal(c);
@@ -261,7 +279,9 @@ async function runLoop() {
       const card = v.legal.length === 1 ? v.legal[0]
         : await ask('card', { view: v, opts: { seed: game.boardNo * 1000 + game.plays.length, maxSamples: levelConfig(store.tournament.level).samples, timeMs: levelConfig(store.tournament.level).timeMs,
           blunder: a.seat % 2 === 1 ? levelConfig(store.tournament.level).blunder : 0 } });
-      const wait = p.card - (Date.now() - t0);
+      // הובלה ראשונה וקלף ראשון בלקיחה: עוד קצת מחשבה
+      const extra = game.plays.length === 0 ? 700 : game.play.trick.length === 0 ? 300 : 0;
+      const wait = thinkMs('card', extra) - (Date.now() - t0);
       if (wait > 0) await sleep(wait);
       if (token !== loopToken) return;
       await doCardInternal(card);
@@ -271,11 +291,14 @@ async function runLoop() {
 
 function doCallInternal(c) {
   game.addCall(c);
+  fresh = { kind: 'call', card: -1, idx: game.auction.calls.length - 1, at: Date.now() };
+  bidAdvice = null;
   tick(440);
   saveLive();
 }
 async function doCardInternal(card) {
   const r = game.addCard(card);
+  fresh = { kind: 'card', card, idx: -1, at: Date.now() };
   tick(r.trickDone ? 660 : 520);
   hintCard = null;
   saveLive();
@@ -330,12 +353,24 @@ function renderTable() {
   const dummySeat = play ? play.dummy : null;
   const dummyShown = play && play.dummyVisible();
   const myTurn = a && a.human && !busy && !pausedTrick;
+  const age = Date.now() - fresh.at;
+  const animStyle = age < FRESH_MS ? `style="animation-delay:-${age}ms"` : '';
+  // ההכרזה האחרונה של כל שחקן מופיעה כבועה ליד השם
+  const lastCallIdx = (s) => { for (let i = g.auction.calls.length - 1; i >= 0; i--) if (g.auction.seatOf(i) === s) return i; return -1; };
 
   const seatTag = (s) => {
     const n = names[s];
     const role = play ? (s === play.declarer ? 'מכריז' : s === play.dummy ? 'דומם' : '') : (s === g.info.dealer && g.auction.calls.length === 0 ? 'מחלק' : '');
     const turn = a && (a.seat === s) && !pausedTrick;
-    return `<div class="seat ${vul[sideOf(s)] ? 'vul' : ''} ${turn ? 'turn' : ''}">${turn ? `<span class="turn-ic" aria-label="תור">${a.human ? '👉' : '⏳'}</span>` : ''}<span class="flag">${n.flag}</span><span class="nm">${esc(n.name)}</span>${role ? `<span class="role">${role}</span>` : ''}</div>`;
+    let said = '';
+    if (g.phase === 'bidding') {
+      const li = lastCallIdx(s);
+      if (li >= 0) {
+        const c = g.auction.calls[li], isNew = fresh.kind === 'call' && fresh.idx === li && age < FRESH_MS;
+        said = `<span class="said ${c === PASS ? 'p' : ''} ${isNew ? 'pop' : ''}" ${isNew ? animStyle : ''}>${c === PASS ? 'פס' : c === DOUBLE ? 'X' : c === REDOUBLE ? 'XX' : callHtml(c)}</span>`;
+      }
+    }
+    return `<div class="seat ${vul[sideOf(s)] ? 'vul' : ''} ${turn ? 'turn' : ''}">${turn ? `<span class="turn-ic" aria-label="תור">${a.human ? '👉' : '💭'}</span>` : ''}<span class="flag">${n.flag}</span><span class="nm">${esc(n.name)}</span>${role ? `<span class="role">${role}</span>` : ''}${said}</div>`;
   };
   const backs = (s) => `<div class="backs" aria-label="${g.play ? g.play.hands[s].length : 13} קלפים">${'<i></i>'.repeat(Math.min(13, play ? play.hands[s].length : 13))}</div>`;
 
@@ -375,7 +410,10 @@ function renderTable() {
     const tr = pausedTrick ? pausedTrick.plays : play.trick;
     const winner = pausedTrick ? pausedTrick.winner : null;
     const slot = !pausedTrick && a ? `<div class="slot pos-${a.seat}">תור<br>${esc(names[a.seat].name)}</div>` : '';
-    center = `<div class="trick">${tr.map((p) => cardHtml(p.card, `pos-${p.seat} ${winner === p.seat ? 'win' : ''}`, 'tabindex="-1"')).join('')}${slot}
+    center = `<div class="trick">${tr.map((p) => {
+      const flying = fresh.kind === 'card' && fresh.card === p.card && age < FRESH_MS;
+      return cardHtml(p.card, `pos-${p.seat} ${winner === p.seat ? 'win' : ''} ${flying ? `fly from-${p.seat}` : ''}`, `tabindex="-1" ${flying ? animStyle : ''}`);
+    }).join('')}${slot}
       ${!tr.length ? `<div class="ct"><div class="contract-badge">חוזה ${contractHtml(ct)}<br><small>${esc(names[ct.declarer].name)} מכריז/ה</small></div></div>` : ''}</div>`;
   }
 
@@ -387,9 +425,9 @@ function renderTable() {
   let dock = '';
   const usTricks = play ? play.won[0] : 0, themTricks = play ? play.won[1] : 0;
   if (g.phase === 'bidding') {
-    if (myTurn) dock = `<div class="banner your">${esc(store.settings.name)}, תורך להכריז! 👇</div>${bidBox()}`;
+    if (myTurn) dock = `<div class="banner your">${esc(store.settings.name)}, תורך להכריז! 👇</div><div class="bid-area">${advicePanel()}<div class="bid-main">${bidBox()}</div></div>`;
     else dock = otherTurn(names[a.seat].name, a.seat);
-    dock += `<div class="tools">${myTurn ? '<button class="btn" data-act="hint">💡 עצה</button>' : ''}${store.settings.showHcp ? `<span class="pill">${handHcp(g.hands[HUMAN])} נקודות</span>` : ''}</div>`;
+    if (store.settings.showHcp) dock += `<div class="tools"><span class="pill">${handHcp(g.hands[HUMAN])} נקודות</span></div>`;
   } else if (play) {
     const weDeclare = sideOf(play.declarer) === 0;
     const needed = ct.level + 6;
@@ -421,7 +459,7 @@ function renderTable() {
       </div>
       <button class="icon-btn" data-act="menu" aria-label="תפריט">☰</button>
     </header>
-    <section class="felt">
+    <section class="felt ${g.phase === 'bidding' ? 'bidding' : ''}">
       <div class="area-n">${seatTag(0)}${north}</div>
       <div class="area-d">${side ? '' : ewDummy}</div>
       <div class="area-w">${seatTag(3)}${side && dummySeat === 3 ? ewDummy : ''}</div>
@@ -448,6 +486,8 @@ function renderTable() {
     else if (act === 'menu') openMenu();
     else if (act === 'last') showLastTrick();
     else if (act === 'hint') giveHint();
+    else if (act === 'advice') { bidAdvice = { call: chooseCall(game.hands[HUMAN], game.auction.calls, game.auction.dealer, game.info.vul), at: game.auction.calls.length }; render(); }
+    else if (act === 'take-advice' && bidAdvice) { selected = bidAdvice.call; humanCall(bidAdvice.call); }
     else if (act === 'claim') tryClaim();
   };
 }
@@ -463,14 +503,35 @@ function auctionTable(names) {
   const cells = [];
   const offset = cols.indexOf(g.info.dealer);
   for (let i = 0; i < offset; i++) cells.push('<td></td>');
-  g.auction.calls.forEach((c) => {
+  g.auction.calls.forEach((c, i) => {
     const cls = c === PASS ? 'p' : c === DOUBLE ? 'x' : c === REDOUBLE ? 'xx' : '';
-    cells.push(`<td class="${cls}">${c === DOUBLE ? 'X' : c === REDOUBLE ? 'XX' : c === PASS ? 'פס' : callHtml(c)}</td>`);
+    const age = Date.now() - fresh.at;
+    const isNew = fresh.kind === 'call' && fresh.idx === i && age < FRESH_MS;
+    cells.push(`<td class="${cls}"><span class="${isNew ? 'pop cell' : 'cell'}" ${isNew ? `style="animation-delay:-${age}ms"` : ''}>${c === DOUBLE ? 'X' : c === REDOUBLE ? 'XX' : c === PASS ? 'פס' : callHtml(c)}</span></td>`);
   });
   if (!g.auction.isComplete()) cells.push('<td class="q">?</td>');
   const rows = [];
   for (let i = 0; i < cells.length; i += 4) rows.push(`<tr>${cells.slice(i, i + 4).join('')}${'<td></td>'.repeat(Math.max(0, 4 - cells.slice(i, i + 4).length))}</tr>`);
-  return `<div class="auction"><table><thead><tr>${cols.map((s) => `<th class="${g.info.vul[sideOf(s)] ? 'vul' : ''}">${esc(names[s].name)}${s === g.info.dealer ? ' (מחלק)' : ''}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+  const turnSeat = g.auction.isComplete() ? -1 : g.auction.turn;
+  return `<div class="auction"><table><thead><tr>${cols.map((s) => `<th class="${g.info.vul[sideOf(s)] ? 'vul' : ''} ${s === turnSeat ? 'turn' : ''}">${esc(names[s].name)}${s === g.info.dealer ? ' (מחלק)' : ''}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+}
+
+function advicePanel() {
+  const calls = game.auction.calls.length;
+  if (!bidAdvice || bidAdvice.at !== calls) {
+    return `<div class="advice"><button class="btn advice-btn" data-act="advice">💡 מה ${PARTNER.name} ממליצה?</button></div>`;
+  }
+  const c = bidAdvice.call;
+  const hand = game.hands[HUMAN];
+  const len = [0, 0, 0, 0];
+  for (const x of hand) len[suitOf(x)]++;
+  const callTxt = c === PASS ? 'פס' : c === DOUBLE ? 'כפל' : c === REDOUBLE ? 'כפל חוזר' : callHtml(c);
+  return `<div class="advice shown">
+    <div class="advice-t">💡 ${PARTNER.name} ממליצה</div>
+    <div class="advice-call">${callTxt}</div>
+    <div class="advice-sum">${handHcp(hand)} נקודות · <span dir="ltr">${[3, 2, 1, 0].map((s) => `${coloredStrain(s)}${len[s]}`).join(' ')}</span></div>
+    <button class="btn primary" data-act="take-advice">הכריזי ${callTxt}</button>
+  </div>`;
 }
 
 function bidBox() {
@@ -478,7 +539,7 @@ function bidBox() {
   const legal = new Set(A.legalCalls());
   const minBid = [...legal].filter(isBid).sort((x, y) => x - y)[0];
   const minLevel = minBid ? levelOf(minBid) : 8;
-  const maxShown = showAllLevels ? 7 : Math.min(7, minLevel + 2);
+  const maxShown = showAllLevels ? 7 : Math.min(7, minLevel + (narrowLayout.matches ? 1 : 2));
   let grid = '';
   for (let L = minLevel; L <= maxShown; L++) {
     for (let s = 0; s < 5; s++) {
