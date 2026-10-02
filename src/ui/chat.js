@@ -121,6 +121,10 @@ export function createChat(o) {
   }
 
   function draw() {
+    const oldInput = /** @type {HTMLInputElement|null} */ (root.querySelector('#chat-input'));
+    const draft = oldInput?.value || '';
+    const focused = document.activeElement === oldInput;
+    const start = oldInput?.selectionStart, end = oldInput?.selectionEnd;
     const ctx = o.getCtx();
     const wide = isWide();
     document.body.classList.toggle('chat-side', wide);
@@ -140,9 +144,11 @@ export function createChat(o) {
       <div class="chat-quick">${pending ? pending.replies.map((r) => `<button data-chat="reply">${esc(r)}</button>`).join('') : ''}
         ${quick.map((q) => `<button class="q" data-chat-act="${q.act}">${esc(q.label)}</button>`).join('')}</div>
       <form class="chat-form" autocomplete="off">
-        <input id="chat-input" type="text" maxlength="300" placeholder="לכתוב הודעה..." enterkeyhint="send">
+        <input id="chat-input" aria-label="הודעה לשחקנים" type="text" maxlength="300" placeholder="לכתוב הודעה..." enterkeyhint="send">
         <button type="submit" class="send">שלחי</button>
       </form>`;
+    const input = /** @type {HTMLInputElement|null} */ (root.querySelector('#chat-input'));
+    if (input) { input.value = draft; if (focused) { input.focus(); input.setSelectionRange(start, end); } }
     const list = root.querySelector('.chat-list');
     if (list) list.scrollTop = list.scrollHeight;
   }

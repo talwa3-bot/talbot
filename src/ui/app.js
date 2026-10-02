@@ -6,6 +6,7 @@ import { createTournament, boardNoAt, opponentsAt, standings, matchpoints, PARTN
 import { chooseCall } from '../ai/bid-ai.js';
 import { ask } from '../ai/client.js';
 import { interpret } from '../ai/bid-ai.js';
+import { createInstall } from './install.js';
 import { createChat } from './chat.js';
 import { eventLines, smallTalk, bidAdviceText, explainPartnerBid, cardAdviceText } from '../game/chatter.js';
 
@@ -14,7 +15,7 @@ const STORE_KEY = 'talbot.bridge.v1';
 
 /** @typedef {{name:string, scale:number, speed:'slow'|'normal'|'fast', colors:2|4, confirm:boolean, sound:boolean, showHcp:boolean, contrast:'normal'|'high', partnerPlaysDummy:boolean, confirmCards:boolean, partnerAdvice:'always'|'ask'}} Settings */
 /** @type {Settings} */
-const DEFAULTS = { name: 'נסיה', scale: 1.15, speed: 'slow', colors: 2, confirm: true, sound: true, showHcp: false, contrast: 'normal', partnerPlaysDummy: true, confirmCards: false, partnerAdvice: 'always' };
+const DEFAULTS = { name: 'נסיה', scale: 1.3, speed: 'slow', colors: 2, confirm: true, sound: true, showHcp: false, contrast: 'high', partnerPlaysDummy: true, confirmCards: true, partnerAdvice: 'always' };
 
 /** @type {{settings:Settings, tournament:any, lastBoards:number, lastLevel:string, chat?:any[]}} */
 let store = { settings: { ...DEFAULTS }, tournament: null, lastBoards: 8, lastLevel: 'champion' };
@@ -151,7 +152,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // זמני חשיבה (מילישניות, טווח אקראי) כדי שהשחקנים ירגישו אנושיים
 const SPEEDS = {
-  slow: { bid: [1300, 2300], card: [1200, 2200], trick: 2400 },
+  slow: { bid: [1800, 2800], card: [1800, 2800], trick: 5000 },
   normal: { bid: [800, 1400], card: [800, 1400], trick: 1600 },
   fast: { bid: [300, 600], card: [350, 650], trick: 900 },
 };
@@ -165,6 +166,7 @@ function thinkMs(kind, extra = 0) {
 let fresh = { kind: '', card: -1, idx: -1, at: 0 };
 const FRESH_MS = 650;
 /** @type {{call:number, at:number}|null} */ let bidAdvice = null;
+const install = createInstall({ openSheet, closeSheet, onChange: () => { if (view === 'lobby') render(); } });
 const narrowLayout = window.matchMedia('(max-width: 819px)');
 narrowLayout.addEventListener('change', () => { if (view === 'table') render(); });
 
@@ -203,7 +205,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 const suitClass = (s) => (s === 2 ? 'red' : s === 1 ? 'dia' : s === 0 ? 'clb' : '');
 function cardHtml(c, cls = '', attrs = '') {
   const s = suitOf(c);
-  return `<button class="card ${suitClass(s)} ${cls}" data-card="${c}" ${attrs} aria-label="${rankLabel(rankOf(c))} ${SUIT_SYMBOL[s]}">
+  return `<button class="card ${suitClass(s)} ${cls}" data-card="${c}" ${attrs} aria-label="${rankLabel(rankOf(c))} ${['תלתן', 'יהלום', 'לב', 'עלה'][s]}">
     <span class="r">${rankLabel(rankOf(c))}</span><span class="s">${SUIT_SYMBOL[s]}</span></button>`;
 }
 function callHtml(c) {
@@ -245,30 +247,53 @@ function toast(msg, ms = 2600) {
 }
 
 // ---------- חלונות ----------
+let sheetReturnFocus = null;
 function openSheet(html, onClick) {
   closeSheet();
+  sheetReturnFocus = document.activeElement;
   const bg = document.createElement('div');
   bg.className = 'sheet-bg';
-  bg.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
+  bg.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">${html}</div>`;
   bg.addEventListener('click', (e) => {
     const target = /** @type {HTMLElement} */ (e.target);
     if (target === bg && !bg.dataset.sticky) { closeSheet(); return; }
     const b = /** @type {HTMLElement|null} */ (target.closest('[data-act]'));
     if (b) onClick(b.dataset.act, b);
   });
+  const title = bg.querySelector('h2');
+  if (title) title.id = 'sheet-title';
+  bg.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !bg.dataset.sticky) { closeSheet(); return; }
+    if (e.key !== 'Tab') return;
+    const items = [...bg.querySelectorAll('button:not([disabled]), input, [tabindex="0"]')];
+    const first = /** @type {HTMLElement} */ (items[0]);
+    const last = /** @type {HTMLElement} */ (items[items.length - 1]);
+    if (!first) { e.preventDefault(); return; }
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === bg.firstElementChild)) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
   document.body.appendChild(bg);
+  app.inert = true;
+  const chatRoot = document.getElementById('chat-root');
+  if (chatRoot) chatRoot.inert = true;
+  /** @type {HTMLElement} */ (bg.firstElementChild).focus();
   return bg;
 }
-function closeSheet() { document.querySelectorAll('.sheet-bg').forEach((x) => x.remove()); }
+function closeSheet() {
+  document.querySelectorAll('.sheet-bg').forEach((x) => x.remove());
+  app.inert = false;
+  const chatRoot = document.getElementById('chat-root');
+  if (chatRoot) chatRoot.inert = false;
+  if (sheetReturnFocus?.isConnected) sheetReturnFocus.focus();
+  sheetReturnFocus = null;
+}
 
 // =====================================================================
 // לובי
 // =====================================================================
 function renderLobby() {
+  const optionsOpen = !!app.querySelector('.tournament-options[open]');
   const t = store.tournament;
-  const day = Math.floor(Date.now() / 86400000);
-  const online = 1800 + ((day * 7919) % 900) + new Date().getHours() * 23;
-  const countries = 40 + (day % 12);
   const sel = store.lastBoards || 8;
   const inProgress = t && t.index < t.boards;
   const rOff = levelConfig(store.lastLevel || 'champion').rating;
@@ -280,7 +305,8 @@ function renderLobby() {
       <h1>טורניר הברידג' העולמי</h1>
       <div class="sub">שלום ${esc(store.settings.name)}! טוב לראות אותך שוב</div>
     </div>
-    <div class="row center"><span class="live"><span class="dot"></span>${online.toLocaleString('he-IL')} שחקנים מחוברים מ-${countries} מדינות</span></div>
+    <p class="welcome-note">בקצב שלך, בלי שעון. השותפה והיריבים הם דמויות ממוחשבות.</p>
+
     ${inProgress ? `
     <section class="card-panel">
       <h2>הטורניר שלך מחכה</h2>
@@ -289,6 +315,8 @@ function renderLobby() {
     </section>` : ''}
     <section class="card-panel">
       <h2>${inProgress ? 'או טורניר חדש' : 'טורניר חדש'}</h2>
+      <button class="btn ${inProgress ? '' : 'primary'} big" data-act="new">🏆 התחילי לשחק</button>
+      <details class="tournament-options" ${optionsOpen ? 'open' : ''}><summary>אפשרויות הטורניר · ${sel} חלוקות</summary>
       <div class="choice" role="group" aria-label="אורך הטורניר">
         ${[[6, 'קצר', '~30 דקות'], [8, 'רגיל', '~45 דקות'], [12, 'ארוך', '~70 דקות']].map(([n, l, d]) =>
           `<button class="btn" data-act="len" data-n="${n}" aria-pressed="${sel === n}"><b>${l}</b><span>${n} חלוקות</span><small>${d}</small></button>`).join('')}
@@ -298,13 +326,12 @@ function renderLobby() {
         ${Object.entries(LEVELS).map(([k, L]) =>
           `<button class="btn" data-act="lvl" data-l="${k}" aria-pressed="${(store.lastLevel || 'champion') === k}"><b>${L.name}</b><small>${L.desc}</small></button>`).join('')}
       </div>
-      <div style="height:12px"></div>
-      <button class="btn ${inProgress ? '' : 'primary'} big" data-act="new">🏆 הצטרפי לטורניר</button>
+      </details>
     </section>
-    <section class="card-panel">
-      <h2>הזוגות המובילים היום</h2>
+    ${install.card()}
+    <details class="card-panel"><summary>הזוגות בטורניר</summary>
       <ul class="players">${shown.map((p) => `<li><span class="flag">${p.flag}</span><span>${esc(p.names)}</span><span class="rating">${p.rating}</span></li>`).join('')}</ul>
-    </section>
+    </details>
     <div class="row center">
       <button class="btn ghost" data-act="settings">⚙ הגדרות</button>
       <button class="btn ghost" data-act="help">? עזרה</button>
@@ -325,6 +352,7 @@ function renderLobby() {
     } else if (act === 'continue') startBoard();
     else if (act === 'settings') openSettings();
     else if (act === 'help') openHelp();
+    else if (act === 'install') install.open();
   };
 }
 
@@ -429,19 +457,19 @@ async function doCardInternal(card) {
   render();
 }
 
-function humanCall(c) {
+function humanCall(c, confirmed = false) {
   if (busy || !game || game.phase !== 'bidding' || !game.actor().human) return;
   if (!game.auction.isLegal(c)) return;
-  if (store.settings.confirm && selected !== c) { selected = c; render(); return; }
+  if (store.settings.confirm && !confirmed) { selected = c; render(); return; }
   selected = null; showAllLevels = false;
   doCallInternal(c);
   runLoop();
 }
-async function humanCard(c) {
+async function humanCard(c, confirmed = false) {
   if (busy || !game || game.phase !== 'playing') return;
   const a = game.actor();
   if (!a.human || !game.play.isLegal(c)) return;
-  if (store.settings.confirmCards && selected !== c) { selected = c; render(); tick(800, 0.03); return; }
+  if (store.settings.confirmCards && !confirmed) { selected = c; render(); tick(800, 0.03); return; }
   selected = null; busy = true;
   await doCardInternal(c);
   busy = false;
@@ -504,7 +532,7 @@ function renderTable() {
       return `<div class="col"><div class="suit-h" style="color:${su === 2 ? 'var(--red)' : su === 1 ? 'var(--diamond)' : su === 0 ? 'var(--club)' : '#111'};${su === 3 || su === 0 ? 'text-shadow:0 0 3px #fff' : ''}">${SUIT_SYMBOL[su]}</div>
         <div class="chips">${cards.map((c) => {
           const off = interactive && !legal.includes(c);
-          return `<button class="chip ${suitClass(su)} ${off ? 'off' : ''} ${interactive && !off ? 'playable' : ''} ${selected === c ? 'sel' : ''}" data-card="${c}" ${interactive && !off ? '' : 'tabindex="-1"'}>${rankLabel(rankOf(c))}</button>`;
+          return `<button class="chip ${suitClass(su)} ${off ? 'off' : ''} ${interactive && !off ? 'playable' : ''} ${selected === c ? 'sel' : ''}" data-card="${c}" aria-label="${rankLabel(rankOf(c))} ${['תלתן', 'יהלום', 'לב', 'עלה'][su]}" aria-pressed="${selected === c}" ${interactive && !off ? '' : 'disabled'}>${rankLabel(rankOf(c))}</button>`;
         }).join('') || '<span class="muted">—</span>'}</div></div>`;
     }).join('')}</div></div>`;
   };
@@ -517,7 +545,7 @@ function renderTable() {
     const legal = interactive ? play.legalCards(HUMAN) : [];
     const iAmDummy = g.humanIsDummy();
     return `${iAmDummy && dummyShown ? `<div class="dummy-label">את הדומם · ${esc(PARTNER.name)} משחקת את החוזה</div>` : ''}
-      <div class="hand">${sorted.map((c) => cardHtml(c, `${interactive ? (legal.includes(c) ? 'playable' : 'off') : ''} ${selected === c ? 'sel' : ''} ${hintCard === c ? 'sel' : ''}`)).join('')}</div>`;
+      <div class="hand">${sorted.map((c) => cardHtml(c, `${interactive ? (legal.includes(c) ? 'playable' : 'off') : ''} ${selected === c ? 'sel' : ''} ${hintCard === c ? 'sel' : ''}`, `aria-pressed="${selected === c}" ${interactive && legal.includes(c) ? '' : 'disabled'}`)).join('')}</div>`;
   };
 
   // מרכז
@@ -555,7 +583,7 @@ function renderTable() {
       <span class="muted">${weDeclare ? `צריך ${needed} לקיחות` : `להפלה צריך ${14 - needed}`}</span></div>`;
     if (myTurn) {
       const fromDummy = a.seat !== HUMAN;
-      dock += `<div class="banner your">${esc(store.settings.name)}, ${fromDummy ? 'תורך לשחק קלף מהדומם ⬆' : 'תורך לשחק קלף! 👇'}${store.settings.confirmCards ? '<br><small class="muted">לחיצה בוחרת, לחיצה שנייה משחקת</small>' : '<br><small class="muted">לוחצים על קלף, והוא יוצא לשולחן</small>'}</div>`;
+      dock += `<div class="banner your">${esc(store.settings.name)}, ${fromDummy ? 'תורך לשחק קלף מהדומם ⬆' : 'תורך לשחק קלף! 👇'}${store.settings.confirmCards ? '<br><small class="muted">בחרי קלף, ואז לחצי על ״שחקי״ לאישור</small>' : '<br><small class="muted">לוחצים על קלף, והוא יוצא לשולחן</small>'}</div>`;
       if (selected !== null) dock += `<div class="confirm"><button class="btn primary" data-act="play-sel">שחקי ${rankLabel(rankOf(selected))}${SUIT_SYMBOL[suitOf(selected)]}</button><button class="btn" data-act="unsel">ביטול</button></div>`;
     } else if (!a) {
       dock += `<div class="banner"><span class="thinking">סופרים את התוצאות</span></div>`;
@@ -567,7 +595,7 @@ function renderTable() {
       ${myTurn && play.declarer === HUMAN && play.trick.length === 0 && play.history.length < 12 ? '<button class="btn" data-act="claim">✋ כל השאר שלי</button>' : ''}</div>`;
   }
 
-  dock = peek + dock;
+  dock = dock + peek;
   app.innerHTML = `
   <div class="screen-table">
     <header class="topbar">
@@ -579,7 +607,7 @@ function renderTable() {
         ${place ? `<span class="pill">🏅 מקום ${place}/${t.field.length + 1}</span>` : ''}
       </div>
       <button class="icon-btn chat-btn" data-act="chat" aria-label="צ׳אט">💬<span class="badge-slot">${badgeHtml()}</span></button>
-      <button class="icon-btn" data-act="menu" aria-label="תפריט">☰</button>
+      <button class="icon-btn" data-act="menu" aria-label="תפריט">☰ תפריט</button>
     </header>
     <section class="felt ${g.phase === 'bidding' ? 'bidding' : ''}">
       <div class="area-n">${seatTag(0)}${north}</div>
@@ -595,22 +623,22 @@ function renderTable() {
   app.onclick = (e) => {
     const el = /** @type {HTMLElement} */ (e.target);
     const cardEl = /** @type {HTMLElement|null} */ (el.closest('[data-card]'));
-    if (cardEl && cardEl.closest('.area-s, .area-n, .area-d')) { humanCard(Number(cardEl.dataset.card)); return; }
+    if (cardEl && cardEl.closest('.area-s, .area-n, .area-d, .area-w, .area-e')) { humanCard(Number(cardEl.dataset.card)); return; }
     const callEl = /** @type {HTMLElement|null} */ (el.closest('[data-call]'));
     if (callEl) { humanCall(Number(callEl.dataset.call)); return; }
     const b = /** @type {HTMLElement|null} */ (el.closest('[data-act]'));
     if (!b) return;
     const act = b.dataset.act;
-    if (act === 'confirm-call' && selected !== null) humanCall(selected);
+    if (act === 'confirm-call' && selected !== null) humanCall(selected, true);
     else if (act === 'unsel') { selected = null; render(); }
-    else if (act === 'play-sel' && selected !== null) humanCard(selected);
+    else if (act === 'play-sel' && selected !== null) humanCard(selected, true);
     else if (act === 'more') { showAllLevels = true; render(); }
     else if (act === 'menu') openMenu();
     else if (act === 'chat') chat.toggle();
     else if (act === 'last') showLastTrick();
     else if (act === 'hint') giveHint();
     else if (act === 'advice') { bidAdvice = { call: chooseCall(game.hands[HUMAN], game.auction.calls, game.auction.dealer, game.info.vul), at: game.auction.calls.length }; render(); }
-    else if (act === 'take-advice' && bidAdvice) { selected = bidAdvice.call; humanCall(bidAdvice.call); }
+    else if (act === 'take-advice' && bidAdvice) { humanCall(bidAdvice.call); }
     else if (act === 'claim') tryClaim();
   };
 }
@@ -862,12 +890,14 @@ function openSettings() {
   const s = store.settings;
   const seg = (key, opts) => `<div class="seg">${opts.map(([v, l]) => `<button data-act="set" data-k="${key}" data-v="${v}" aria-pressed="${String(s[key]) === String(v)}">${l}</button>`).join('')}</div>`;
   const bg = openSheet(`<h2>הגדרות</h2>
+    <button class="btn primary big" data-act="comfortable">תצוגה נוחה ומשחק רגוע</button>
+    <p>טקסט גדול מאוד, ניגודיות גבוהה ואישור לפני כל מהלך.</p>
     <div class="setting"><label for="nm">השם שלך</label><input id="nm" type="text" value="${esc(s.name)}" maxlength="20" autocomplete="off"></div>
     <div class="setting"><label>גודל טקסט</label>${seg('scale', [[1, 'רגיל'], [1.15, 'גדול'], [1.3, 'גדול מאוד']])}</div>
     <div class="setting"><label>קצב השחקנים האחרים</label>${seg('speed', [['slow', 'רגוע'], ['normal', 'רגיל'], ['fast', 'מהיר']])}</div>
     <div class="setting"><label>צבעי הסדרות</label>${seg('colors', [[2, 'קלאסי (2 צבעים)'], [4, '4 צבעים']])}</div>
     <div class="setting"><label>כשאני המכריזה, מי משחקת את הדומם?</label>${seg('partnerPlaysDummy', [[true, 'השותפה לבד'], [false, 'אני (כמו בטורניר)']])}</div>
-    <div class="setting"><label>משחק קלף</label>${seg('confirmCards', [[false, 'לחיצה אחת'], [true, 'שתי לחיצות (בחירה ואישור)']])}</div>
+    <div class="setting"><label>משחק קלף</label>${seg('confirmCards', [[false, 'לחיצה אחת'], [true, 'בחירה וכפתור אישור']])}</div>
     <div class="setting"><label>אישור לפני הכרזה</label>${seg('confirm', [[true, 'כן (מומלץ)'], [false, 'לא']])}</div>
     <div class="setting"><label>רות מתייעצת איתי</label>${seg('partnerAdvice', [['always', 'בכל הכרזה'], ['ask', 'רק כשאני שואלת']])}</div>
     <div class="setting"><label>צלילים</label>${seg('sound', [[true, 'כן'], [false, 'לא']])}</div>
@@ -875,7 +905,10 @@ function openSettings() {
     <div class="setting"><label>ניגודיות</label>${seg('contrast', [['normal', 'רגילה'], ['high', 'גבוהה']])}</div>
     <div style="height:12px"></div><button class="btn primary big" data-act="close">שמירה</button>`,
   (act, b) => {
-    if (act === 'set') {
+    if (act === 'comfortable') {
+      Object.assign(s, { scale: 1.3, contrast: 'high', speed: 'slow', confirm: true, confirmCards: true });
+      save(); applySettings(); render(); openSettings();
+    } else if (act === 'set') {
       const k = b.dataset.k, raw = b.dataset.v;
       const v = raw === 'true' ? true : raw === 'false' ? false : isNaN(Number(raw)) ? raw : Number(raw);
       /** @type {any} */ (s)[k] = v;
@@ -896,7 +929,7 @@ function openHelp() {
     <ul style="line-height:1.6;padding-inline-start:20px">
       <li>את יושבת בדרום (למטה). השותפה שלך, ${PARTNER.name}, בצפון.</li>
       <li><b>הכרזה:</b> לוחצים על ההכרזה בקופסה ואז על "הכריזי". ירוק = פס, אדום = כפל.</li>
-      <li><b>משחק:</b> לוחצים על קלף, והוא יוצא לשולחן. קלפים שאסור לשחק מוצגים חיוורים. (אפשר לבחור בהגדרות שתי לחיצות.)</li>
+      <li><b>משחק:</b> בוחרים קלף ולוחצים על ״שחקי״ לאישור. אפשר לבטל או לבחור קלף אחר. קלפים שאסור לשחק מוצגים חיוורים. אפשר לשנות את האישור בהגדרות.</li>
       <li><b>💬 שיחה:</b> השחקנים מדברים ליד השולחן. אפשר לענות בכפתורים או לכתוב.</li>
       <li>כשאת המכריזה, ${PARTNER.name} משחקת לבד את הקלפים שלה (הדומם). אפשר לשנות בהגדרות.</li>
       <li><b>💡 עצה</b> מראה מה השותפה הייתה עושה. <b>✋ כל השאר שלי</b> מסיים את החלוקה כשכל הלקיחות שלך.</li>
@@ -915,6 +948,6 @@ chat.draw();
 if (store.tournament && store.tournament.index >= store.tournament.boards) store.tournament = { ...store.tournament };
 render();
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js').then(() => navigator.serviceWorker.ready).then(() => install.setOfflineReady()).catch(() => {});
 }
 void NT; void contractText;
