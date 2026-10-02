@@ -57,7 +57,7 @@ test('install guide handles Samsung, delayed prompts, dismissal and acceptance',
     Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { userAgent: 'Android SamsungBrowser/25.0 Chrome/121', platform: 'Linux', maxTouchPoints: 5 } });
     Object.defineProperty(globalThis, 'location', { configurable: true, value: { href: 'https://example.com/talbot/' } });
     const install = createInstall({ openSheet(content, handler) { html = content; action = handler; sheet = { isConnected: true, querySelectorAll: () => [] }; return sheet; }, closeSheet() { sheet.isConnected = false; }, onChange() {} });
-    assert.match(install.card(), /איך מוסיפים אייקון/);
+    assert.match(install.card(), /הורד את האפליקציה לטלפון/);
     install.open();
     assert.match(html, /Add page to/);
     await action('missing');
