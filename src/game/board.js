@@ -9,12 +9,14 @@ import { interpret } from '../ai/bid-ai.js';
 
 export class BoardGame {
   /**
-   * @param {{boardNo:number, seed:number, humanSeat?:number, calls?:number[], plays?:number[]}} o
+   * @param {{boardNo:number, seed:number, humanSeat?:number, calls?:number[], plays?:number[], partnerPlaysDummy?:boolean}} o
    */
-  constructor({ boardNo, seed, humanSeat = 2, calls = [], plays = [] }) {
+  constructor({ boardNo, seed, humanSeat = 2, calls = [], plays = [], partnerPlaysDummy = true }) {
     this.boardNo = boardNo;
     this.seed = seed;
     this.humanSeat = humanSeat;
+    /** כשהאדם הוא הכרוז: השותפ/ה משחק/ת לבד את קלפי הדומם (לא לפי החוק הרשמי, לנוחות) */
+    this.partnerPlaysDummy = partnerPlaysDummy;
     this.info = boardInfo(boardNo);
     this.hands = dealBoard(seed, boardNo);
     this.auction = new Auction(this.info.dealer);
@@ -42,7 +44,8 @@ export class BoardGame {
     }
     if (this.phase === 'playing') {
       const seat = this.play.turn;
-      const controller = seat === this.play.dummy ? this.play.declarer : seat;
+      const dummyByPartner = this.partnerPlaysDummy && seat === this.play.dummy && this.play.declarer === this.humanSeat;
+      const controller = seat === this.play.dummy && !dummyByPartner ? this.play.declarer : seat;
       return { seat, controller, human: controller === this.humanSeat };
     }
     return null;

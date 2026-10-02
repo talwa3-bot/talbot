@@ -9,9 +9,9 @@ import { ask } from '../ai/client.js';
 const HUMAN = 2; // דרום
 const STORE_KEY = 'talbot.bridge.v1';
 
-/** @typedef {{name:string, scale:number, speed:'slow'|'normal'|'fast', colors:2|4, confirm:boolean, sound:boolean, showHcp:boolean, contrast:'normal'|'high'}} Settings */
+/** @typedef {{name:string, scale:number, speed:'slow'|'normal'|'fast', colors:2|4, confirm:boolean, sound:boolean, showHcp:boolean, contrast:'normal'|'high', partnerPlaysDummy:boolean}} Settings */
 /** @type {Settings} */
-const DEFAULTS = { name: 'סבתא', scale: 1.15, speed: 'slow', colors: 2, confirm: true, sound: true, showHcp: false, contrast: 'normal' };
+const DEFAULTS = { name: 'נסיה', scale: 1.15, speed: 'slow', colors: 2, confirm: true, sound: true, showHcp: false, contrast: 'normal', partnerPlaysDummy: true };
 
 /** @type {{settings:Settings, tournament:any, lastBoards:number, lastLevel:string}} */
 let store = { settings: { ...DEFAULTS }, tournament: null, lastBoards: 8, lastLevel: 'champion' };
@@ -19,6 +19,9 @@ try {
   const raw = localStorage.getItem(STORE_KEY);
   if (raw) { const s = JSON.parse(raw); store = { ...store, ...s, settings: { ...DEFAULTS, ...(s.settings || {}) } }; }
 } catch { /* בלי שמירה */ }
+// השם הישן "סבתא" מתעדכן לשם האמיתי
+if (store.settings.name === 'סבתא') store.settings.name = 'נסיה';
+if (store.tournament && store.tournament.playerName === 'סבתא') store.tournament.playerName = 'נסיה';
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch { /* מצב פרטי */ } }
 
 // ---------- מצב ריצה ----------
@@ -62,6 +65,9 @@ function tick(freq = 520, dur = 0.06) {
     o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + dur);
   } catch { /* בלי צליל */ }
 }
+
+/** צליל עדין: "תורך" */
+function chime() { tick(660, 0.09); setTimeout(() => tick(880, 0.12), 120); }
 
 // ---------- מסך לא נכבה ----------
 let wakeLock = null;
@@ -222,7 +228,7 @@ function startBoard() {
   closeSheet();
   const t = store.tournament;
   const boardNo = boardNoAt(t, t.index);
-  game = new BoardGame({ boardNo, seed: t.seed, humanSeat: HUMAN, calls: t.live?.calls || [], plays: t.live?.plays || [] });
+  game = new BoardGame({ boardNo, seed: t.seed, humanSeat: HUMAN, calls: t.live?.calls || [], plays: t.live?.plays || [], partnerPlaysDummy: store.settings.partnerPlaysDummy });
   if (t.live?.claim != null) game.claim(t.live.claim);
   fieldPromise = ask('field', { seed: t.seed, boardNo, tables: t.field.length, level: t.level });
   view = 'table'; selected = null; showAllLevels = false; pausedTrick = null; hintCard = null;
@@ -241,7 +247,7 @@ async function runLoop() {
   while (game && view === 'table' && token === loopToken) {
     if (game.phase === 'done') { await finishBoard(); return; }
     const a = game.actor();
-    if (a.human) { busy = false; render(); return; }
+    if (a.human) { busy = false; render(); chime(); return; }
     busy = true; render();
     const p = pace();
     if (game.phase === 'bidding') {
@@ -329,7 +335,7 @@ function renderTable() {
     const n = names[s];
     const role = play ? (s === play.declarer ? 'מכריז' : s === play.dummy ? 'דומם' : '') : (s === g.info.dealer && g.auction.calls.length === 0 ? 'מחלק' : '');
     const turn = a && (a.seat === s) && !pausedTrick;
-    return `<div class="seat ${vul[sideOf(s)] ? 'vul' : ''} ${turn ? 'turn' : ''}"><span class="flag">${n.flag}</span><span class="nm">${esc(n.name)}</span>${role ? `<span class="role">${role}</span>` : ''}</div>`;
+    return `<div class="seat ${vul[sideOf(s)] ? 'vul' : ''} ${turn ? 'turn' : ''}">${turn ? `<span class="turn-ic" aria-label="תור">${a.human ? '👉' : '⏳'}</span>` : ''}<span class="flag">${n.flag}</span><span class="nm">${esc(n.name)}</span>${role ? `<span class="role">${role}</span>` : ''}</div>`;
   };
   const backs = (s) => `<div class="backs" aria-label="${g.play ? g.play.hands[s].length : 13} קלפים">${'<i></i>'.repeat(Math.min(13, play ? play.hands[s].length : 13))}</div>`;
 
@@ -340,7 +346,7 @@ function renderTable() {
     const interactive = myTurn && controller === HUMAN && a.seat === s;
     const legal = interactive ? play.legalCards(s) : [];
     const order = play.trump !== null ? [play.trump, ...[3, 2, 0, 1].filter((x) => x !== play.trump)] : [3, 2, 0, 1];
-    return `<div class="dummy-wrap"><div class="dummy-label">הדומם של ${esc(names[s].name)}${interactive ? ' · תורך לשחק מהדומם' : ''}</div><div class="dummy">${order.map((su) => {
+    return `<div class="dummy-wrap"><div class="dummy-label">הדומם של ${esc(names[s].name)}${interactive ? ' · תורך לשחק מהדומם' : (g.partnerPlaysDummy && play.declarer === HUMAN && s === play.dummy ? ' · משחקת לבד' : '')}</div><div class="dummy">${order.map((su) => {
       const cards = hand.filter((c) => suitOf(c) === su).sort((x, y) => rankOf(y) - rankOf(x));
       return `<div class="col"><div class="suit-h" style="color:${su === 2 ? 'var(--red)' : su === 1 ? 'var(--diamond)' : su === 0 ? 'var(--club)' : '#111'};${su === 3 || su === 0 ? 'text-shadow:0 0 3px #fff' : ''}">${SUIT_SYMBOL[su]}</div>
         <div class="chips">${cards.map((c) => {
@@ -368,7 +374,8 @@ function renderTable() {
   } else if (play) {
     const tr = pausedTrick ? pausedTrick.plays : play.trick;
     const winner = pausedTrick ? pausedTrick.winner : null;
-    center = `<div class="trick">${tr.map((p) => cardHtml(p.card, `pos-${p.seat} ${winner === p.seat ? 'win' : ''}`, 'tabindex="-1"')).join('')}
+    const slot = !pausedTrick && a ? `<div class="slot pos-${a.seat}">תור<br>${esc(names[a.seat].name)}</div>` : '';
+    center = `<div class="trick">${tr.map((p) => cardHtml(p.card, `pos-${p.seat} ${winner === p.seat ? 'win' : ''}`, 'tabindex="-1"')).join('')}${slot}
       ${!tr.length ? `<div class="ct"><div class="contract-badge">חוזה ${contractHtml(ct)}<br><small>${esc(names[ct.declarer].name)} מכריז/ה</small></div></div>` : ''}</div>`;
   }
 
@@ -380,8 +387,8 @@ function renderTable() {
   let dock = '';
   const usTricks = play ? play.won[0] : 0, themTricks = play ? play.won[1] : 0;
   if (g.phase === 'bidding') {
-    if (myTurn) dock = `<div class="banner your">תורך להכריז</div>${bidBox()}`;
-    else dock = `<div class="banner"><span class="thinking">${esc(names[a.seat].name)} חושב/ת</span></div>`;
+    if (myTurn) dock = `<div class="banner your">${esc(store.settings.name)}, תורך להכריז! 👇</div>${bidBox()}`;
+    else dock = otherTurn(names[a.seat].name, a.seat);
     dock += `<div class="tools">${myTurn ? '<button class="btn" data-act="hint">💡 עצה</button>' : ''}${store.settings.showHcp ? `<span class="pill">${handHcp(g.hands[HUMAN])} נקודות</span>` : ''}</div>`;
   } else if (play) {
     const weDeclare = sideOf(play.declarer) === 0;
@@ -390,12 +397,12 @@ function renderTable() {
       <span class="muted">${weDeclare ? `צריך ${needed} לקיחות` : `להפלה צריך ${14 - needed}`}</span></div>`;
     if (myTurn) {
       const fromDummy = a.seat !== HUMAN;
-      dock += `<div class="banner your">${fromDummy ? 'תורך לשחק קלף מהדומם' : 'תורך לשחק קלף'}${store.settings.confirm ? '<br><small class="muted">לחיצה בוחרת, לחיצה שנייה משחקת</small>' : ''}</div>`;
+      dock += `<div class="banner your">${esc(store.settings.name)}, ${fromDummy ? 'תורך לשחק קלף מהדומם ⬆' : 'תורך לשחק קלף! 👇'}${store.settings.confirm ? '<br><small class="muted">לחיצה בוחרת, לחיצה שנייה משחקת</small>' : ''}</div>`;
       if (selected !== null) dock += `<div class="confirm"><button class="btn primary" data-act="play-sel">שחקי ${rankLabel(rankOf(selected))}${SUIT_SYMBOL[suitOf(selected)]}</button><button class="btn" data-act="unsel">ביטול</button></div>`;
     } else if (!a) {
       dock += `<div class="banner"><span class="thinking">סופרים את התוצאות</span></div>`;
     } else if (!pausedTrick) {
-      dock += `<div class="banner"><span class="thinking">${esc(names[a.seat === play.dummy ? play.declarer : a.seat].name)} חושב/ת</span></div>`;
+      dock += otherTurn(names[a.controller].name, a.seat);
     } else dock += `<div class="banner">${esc(names[pausedTrick.winner].name)} לקח/ה את הלקיחה</div>`;
     dock += `<div class="tools">${play.history.length ? '<button class="btn" data-act="last">↺ הלקיחה הקודמת</button>' : ''}
       ${myTurn ? '<button class="btn" data-act="hint">💡 עצה</button>' : ''}
@@ -443,6 +450,11 @@ function renderTable() {
     else if (act === 'hint') giveHint();
     else if (act === 'claim') tryClaim();
   };
+}
+
+const ARROW = ['⬆', '➡', '⬇', '⬅']; // צפון למעלה, מזרח מימין, מערב משמאל
+function otherTurn(name, seat) {
+  return `<div class="banner other">${ARROW[seat]} התור של <b>${esc(name)}</b> <span class="thinking">חושב/ת</span></div>`;
 }
 
 function auctionTable(names) {
@@ -662,6 +674,7 @@ function openSettings() {
     <div class="setting"><label>גודל טקסט</label>${seg('scale', [[1, 'רגיל'], [1.15, 'גדול'], [1.3, 'גדול מאוד']])}</div>
     <div class="setting"><label>קצב השחקנים האחרים</label>${seg('speed', [['slow', 'רגוע'], ['normal', 'רגיל'], ['fast', 'מהיר']])}</div>
     <div class="setting"><label>צבעי הסדרות</label>${seg('colors', [[2, 'קלאסי (2 צבעים)'], [4, '4 צבעים']])}</div>
+    <div class="setting"><label>כשאני המכריזה, מי משחקת את הדומם?</label>${seg('partnerPlaysDummy', [[true, 'השותפה לבד'], [false, 'אני (כמו בטורניר)']])}</div>
     <div class="setting"><label>אישור לפני כל מהלך</label>${seg('confirm', [[true, 'כן (מומלץ)'], [false, 'לא']])}</div>
     <div class="setting"><label>צלילים</label>${seg('sound', [[true, 'כן'], [false, 'לא']])}</div>
     <div class="setting"><label>להציג ספירת נקודות</label>${seg('showHcp', [[false, 'לא'], [true, 'כן']])}</div>
@@ -673,12 +686,14 @@ function openSettings() {
       const v = raw === 'true' ? true : raw === 'false' ? false : isNaN(Number(raw)) ? raw : Number(raw);
       /** @type {any} */ (s)[k] = v;
       save(); applySettings();
+      if (game && k === 'partnerPlaysDummy') game.partnerPlaysDummy = !!v;
       b.parentElement.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
     } else if (act === 'close') {
       const nm = /** @type {HTMLInputElement} */ (bg.querySelector('#nm')).value.trim();
       if (nm) s.name = nm;
       if (store.tournament) store.tournament.playerName = s.name;
       save(); closeSheet(); render();
+      if (view === 'table' && game && !busy) runLoop(); // ייתכן שתור הדומם עבר לשותפה
     }
   });
 }
@@ -688,7 +703,7 @@ function openHelp() {
       <li>את יושבת בדרום (למטה). השותפה שלך, ${PARTNER.name}, בצפון.</li>
       <li><b>הכרזה:</b> לוחצים על ההכרזה בקופסה ואז על "הכריזי". ירוק = פס, אדום = כפל.</li>
       <li><b>משחק:</b> לוחצים על קלף כדי להרים אותו, ולוחצים שוב כדי לשחק. קלפים שאסור לשחק מוצגים חיוורים.</li>
-      <li>כשאת המכריזה, תשחקי גם את הקלפים של הדומם.</li>
+      <li>כשאת המכריזה, ${PARTNER.name} משחקת לבד את הקלפים שלה (הדומם). אפשר לשנות בהגדרות.</li>
       <li><b>💡 עצה</b> מראה מה השותפה הייתה עושה. <b>✋ כל השאר שלי</b> מסיים את החלוקה כשכל הלקיחות שלך.</li>
       <li>הטורניר נשמר אוטומטית. אפשר לסגור ולחזור מתי שרוצים.</li>
       <li>הניקוד: דופליקייט. כל חלוקה מושווית לשולחנות האחרים באחוזים.</li>

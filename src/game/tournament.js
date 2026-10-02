@@ -42,7 +42,7 @@ export const levelConfig = (l) => LEVELS[l] || LEVELS.expert;
 /**
  * @param {{seed?:number, boards?:number, playerName?:string, level?:string}} o
  */
-export function createTournament({ seed = (Date.now() % 1e9) | 0, boards = 8, playerName = 'סבתא', level = 'champion' } = {}) {
+export function createTournament({ seed = (Date.now() % 1e9) | 0, boards = 8, playerName = 'נסיה', level = 'champion' } = {}) {
   const rng = mulberry32(seed);
   const pool = [...WORLD_PAIRS];
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }

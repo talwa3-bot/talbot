@@ -101,3 +101,19 @@ test('רמות: ברירת מחדל, ומשחק "אנושי" ברמת מועדו
     assert.equal(chooseCard(v, null, { blunder: 1, seed: 5 }), heuristic(v));
   }
 });
+
+test('כשהאדם מכריז: השותפה משחקת לבד את הדומם (ואפשר לכבות)', async () => {
+  const { bid, PASS } = await import('../src/engine/bidding.js');
+  // דרום (האדם) פותח 1NT וכולם פס: דרום מכריז, צפון דומם
+  const dealer = 2;
+  const calls = [bid(1, 4), PASS, PASS, PASS];
+  let g = new BoardGame({ boardNo: 3, seed: 1, humanSeat: 2, calls });
+  assert.equal(g.info.dealer, dealer);
+  assert.equal(g.play.declarer, 2);
+  // מערב מוביל, ואז תור הדומם (צפון)
+  g.addCard(g.play.legalCards()[0]);
+  assert.equal(g.play.turn, 0);
+  assert.deepEqual(g.actor(), { seat: 0, controller: 0, human: false });
+  g = new BoardGame({ boardNo: 3, seed: 1, humanSeat: 2, calls, plays: g.plays, partnerPlaysDummy: false });
+  assert.deepEqual(g.actor(), { seat: 0, controller: 2, human: true });
+});

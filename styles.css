@@ -274,3 +274,26 @@ button:focus-visible, [tabindex]:focus-visible { outline: 4px solid var(--focus)
   .dock { gap: 6px; padding-top: 6px; }
   .banner small { display: none; }
 }
+
+/* ---------- של מי התור: ברור מאוד ---------- */
+.seat.turn { animation: turnPulse 1.6s ease-in-out infinite; transform: scale(1.06); background: rgba(0,0,0,.6); }
+@keyframes turnPulse { 0%, 100% { box-shadow: 0 0 0 4px var(--gold), 0 0 12px var(--gold); } 50% { box-shadow: 0 0 0 7px var(--gold), 0 0 30px var(--gold); } }
+.turn-ic { font-size: 1.1em; }
+.felt .seat:not(.turn) { opacity: .78; }
+.slot { position: absolute; z-index: 1; width: var(--cw); height: calc(var(--cw) * 1.42); border: 3px dashed var(--gold); border-radius: 9px;
+  display: flex; align-items: center; justify-content: center; text-align: center; color: var(--gold); font-weight: 800;
+  font-size: calc(var(--cw) * .26); line-height: 1.15; direction: rtl; background: rgba(227, 179, 65, .12); animation: slotBlink 1.4s ease-in-out infinite; }
+@keyframes slotBlink { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+.banner.your { background: var(--gold); color: var(--gold-ink); border-radius: 14px; padding: 8px 12px; }
+.banner.your small { color: var(--gold-ink); opacity: .8; }
+.banner.other { background: rgba(255,255,255,.1); border-radius: 14px; padding: 8px 12px; font-weight: 700; }
+.auction td.q { background: var(--gold); color: var(--gold-ink); border-radius: 8px; }
+
+/* טלפון: דומם קומפקטי ברוחב מלא, כדי שהיד תישאר במסך */
+@media (max-width: 819px) {
+  .area-n { flex-direction: column; gap: 4px; }
+  .dummy { width: 100%; padding: 6px; gap: 4px; }
+  .dummy .suit-h { font-size: 1.2em; }
+  .chip { min-width: 34px; height: 40px; font-size: 1.05em; }
+  .dummy-label { font-size: .85em; }
+}
