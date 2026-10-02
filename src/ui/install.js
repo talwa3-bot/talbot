@@ -56,10 +56,10 @@ export function createInstall({ openSheet, closeSheet, onChange }) {
     const help = missing
       ? '<p><b>אין צורך להמשיך לחפש את אותה אפשרות.</b> העתיקי את הקישור, פתחי את Chrome בטלפון והדביקי אותו בשורת הכתובת. אפשר לשחק מיד, גם בלי אייקון.</p>'
       : `<p>הוראות עבור <b>${names[selectedBrowser]}</b>. שמות התפריטים עשויים להשתנות בין גרסאות.</p><ol class="install-steps">${steps[selectedBrowser]}</ol>`;
-    sheet = openSheet(`<h2>${installed() ? 'הברידג׳ מוכן לפתיחה' : 'אייקון של ברידג׳ בטלפון'}</h2>
+    sheet = openSheet(`<h2>${installed() ? 'הברידג׳ מוכן לפתיחה' : 'הברידג׳ כאפליקציה בטלפון'}</h2>
       <div class="install-preview"><img src="icons/icon-180.png" width="80" height="80" alt="אייקון ברידג׳"><b>ברידג׳</b></div>
       ${installed() ? '<p>חפשי את אייקון הברידג׳ במסך הבית או ברשימת האפליקציות. אם ההתקנה אושרה כרגע, ייתכן שייקח רגע עד שיופיע.</p>' : `
-        ${promptEvent ? '<button class="btn primary big" data-act="native-install">התקיני את הברידג׳</button><p>הכפתור יפתח בקשת התקנה של הטלפון.</p>' : '<p>הדפדפן הזה עדיין לא הציע התקנה ישירה. אפשר להוסיף אייקון דרך תפריט הדפדפן.</p>'}
+        ${promptEvent ? '<button class="btn primary big" data-act="native-install">התקיני את הברידג׳</button><p>הכפתור יפתח בקשת התקנה של הטלפון.</p>' : '<p>כדי שהמשחק יופיע כמו אפליקציה רגילה, צריך לפתוח את הקישור <b>בטלפון עצמו</b> ולהוסיף אותו למסך הבית. הדפדפן הזה לא מציע כרגע התקנה ישירה.</p>'}
         ${help}
         <div class="seg" role="group" aria-label="בחירת הדפדפן">
           <button data-act="samsung" aria-pressed="${selectedBrowser === 'samsung'}">דפדפן סמסונג</button>
@@ -94,9 +94,9 @@ export function createInstall({ openSheet, closeSheet, onChange }) {
     card() {
       return `<section class="card-panel install-card" aria-label="התקנת המשחק">
         <img src="icons/icon-180.png" width="64" height="64" alt="">
-        <div><h2>${installed() ? 'הברידג׳ שלך מוכן' : 'אייקון של ברידג׳ בטלפון'}</h2>
-        <p>${installed() ? 'אפשר לפתוח את המשחק מהאייקון.' : promptEvent ? 'ההתקנה זמינה בטלפון שלך.' : 'אפשר לשחק עכשיו או להיעזר במדריך להוספת אייקון.'}</p></div>
-        ${installed() ? '' : `<button class="btn big" data-act="install" ${installing ? 'disabled' : ''}>${installing ? 'ממתינים לאישור בטלפון…' : promptEvent ? 'התקיני את הברידג׳' : 'איך מוסיפים אייקון לטלפון?'}</button>`}
+        <div><h2>${installed() ? 'הברידג׳ שלך מוכן' : 'הברידג׳ כאפליקציה בטלפון'}</h2>
+        <p>${installed() ? 'אפשר לפתוח את המשחק מהאייקון.' : promptEvent ? 'ההתקנה זמינה בטלפון שלך.' : 'הכפתור פותח התקנה או הוראות להוספת אייקון למסך הבית בטלפון.'}</p></div>
+        ${installed() ? '' : `<button class="btn primary big" data-act="install" ${installing ? 'disabled' : ''}>${installing ? 'ממתינים לאישור בטלפון…' : 'הורד את האפליקציה לטלפון'}</button>`}
         <p class="offline-status" role="status">${offlineReady ? '✓ המשחק מוכן גם למשחק ללא אינטרנט' : 'למשחק ללא אינטרנט, השאירי את המשחק פתוח עד לסיום ההכנה.'}</p>
       </section>`;
     },
