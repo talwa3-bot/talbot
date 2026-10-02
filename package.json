@@ -1,0 +1,11 @@
+{
+  "name": "talbot-bridge",
+  "version": "0.1.0",
+  "description": "משחק ברידג' טורניר בעברית, מותאם לגיל השלישי",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/",
+    "sim": "node tests/sim.mjs",
+    "serve": "python3 -m http.server 8080"
+  }
+}
