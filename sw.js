@@ -1,6 +1,6 @@
 // שמירה לעבודה גם בלי אינטרנט. כל שינוי גרסה מרענן את המטמון.
 const PREFIX = `talbot-bridge:${self.registration.scope}:`;
-const VERSION = `${PREFIX}v4`;
+const VERSION = `${PREFIX}v5`;
 const ASSETS = [
   './', './index.html', './styles.css', './manifest.webmanifest', './icons/icon.svg', './icons/icon-180.png',
   './icons/icon-192.png', './icons/icon-512.png', './src/ui/install.js', './src/ui/app.js', './src/ai/client.js', './src/ai/worker.js', './src/ai/core.js', './src/ai/bid-ai.js', './src/ai/play-ai.js',
