@@ -381,7 +381,7 @@ function advanceTakeout(ctx) {
   const pd = sit.partnerCalls[sit.partnerCalls.length - 1];
   const partnerDoubledLast = pd && pd.c === DOUBLE && pd.i > sit.lastBid.i;
   const hcp = f.hcp + f.adj;
-  const s = [S, H, D, C].filter((x) => !theirSuits.has(x)).sort((a, b) => f.len[b] - f.len[a] || (isMajor(b) - isMajor(a)))[0];
+  const s = [S, H, D, C].filter((x) => !theirSuits.has(x)).sort((a, b) => f.len[b] - f.len[a] || (Number(isMajor(b)) - Number(isMajor(a))))[0];
   const minL = cheapest(lastC, s);
   // אחרי שהיריב הכריז שוב, כבר לא חייבים
   if (!partnerDoubledLast && hcp < 6) return PASS;

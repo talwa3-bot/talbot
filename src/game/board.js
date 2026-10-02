@@ -22,12 +22,14 @@ export class BoardGame {
     this.play = null;
     /** @type {number[]} */
     this.plays = [];
+    /** @type {number|null} לקיחות שהכרוז תבע (כל השאר) */
+    this.claimed = null;
     for (const c of calls) this.addCall(c);
     for (const p of plays) this.addCard(p);
   }
   get phase() {
     if (!this.auction.isComplete()) return 'bidding';
-    if (!this.play || this.play.isDone()) return 'done';
+    if (!this.play || this.play.isDone() || this.claimed !== null) return 'done';
     return 'playing';
   }
   get contract() { return this.auction.isComplete() ? this.auction.contract() : null; }
@@ -56,6 +58,8 @@ export class BoardGame {
       if (ct) this.play = new Play(this.hands, ct);
     }
   }
+  /** הכרוז תובע את כל הלקיחות שנותרו @param {number} n */
+  claim(n) { this.claimed = n; }
   /** @param {number} card */
   addCard(card) {
     if (!this.play) throw new Error('אין משחק');
@@ -75,7 +79,7 @@ export class BoardGame {
   result() {
     const ct = this.contract;
     if (!ct) return { contract: null, tricks: 0, ns: 0 };
-    const tricks = this.play.declarerTricks();
+    const tricks = this.play.declarerTricks() + (this.claimed || 0);
     return { contract: ct, tricks, ns: nsScore(ct, tricks, this.info.vul) };
   }
   /** @returns {BoardSnapshot} */
