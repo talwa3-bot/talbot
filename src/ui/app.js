@@ -292,9 +292,14 @@ async function humanCard(c) {
 }
 
 function render() {
-  if (view === 'lobby') return renderLobby();
-  if (view === 'final') return renderFinal();
-  renderTable();
+  try {
+    if (view === 'lobby') return renderLobby();
+    if (view === 'final') return renderFinal();
+    renderTable();
+  } catch (e) {
+    // תקלת תצוגה לא תעצור את המשחק
+    console.error(e);
+  }
 }
 
 function renderTable() {
@@ -377,6 +382,8 @@ function renderTable() {
       const fromDummy = a.seat !== HUMAN;
       dock += `<div class="banner your">${fromDummy ? 'תורך לשחק קלף מהדומם' : 'תורך לשחק קלף'}${store.settings.confirm ? '<br><small class="muted">לחיצה בוחרת, לחיצה שנייה משחקת</small>' : ''}</div>`;
       if (selected !== null) dock += `<div class="confirm"><button class="btn primary" data-act="play-sel">שחקי ${rankLabel(rankOf(selected))}${SUIT_SYMBOL[suitOf(selected)]}</button><button class="btn" data-act="unsel">ביטול</button></div>`;
+    } else if (!a) {
+      dock += `<div class="banner"><span class="thinking">סופרים את התוצאות</span></div>`;
     } else if (!pausedTrick) {
       dock += `<div class="banner"><span class="thinking">${esc(names[a.seat === play.dummy ? play.declarer : a.seat].name)} חושב/ת</span></div>`;
     } else dock += `<div class="banner">${esc(names[pausedTrick.winner].name)} לקח/ה את הלקיחה</div>`;
