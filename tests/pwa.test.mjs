@@ -41,3 +41,40 @@ test('home-screen manifest references valid icons and relative project scope', a
   assert.ok(manifest.icons.some(i => i.sizes === '192x192'));
   assert.ok(manifest.icons.some(i => i.sizes === '512x512'));
 });
+
+import { createInstall, installBrowser } from '../src/ui/install.js';
+
+test('install guide handles Samsung, delayed prompts, dismissal and acceptance', async () => {
+  assert.equal(installBrowser('Mozilla/5.0 (Linux; Android 14) SamsungBrowser/25.0 Chrome/121.0'), 'samsung');
+  assert.equal(installBrowser('Mozilla/5.0 (Linux; Android 14; wv) Chrome/121.0'), 'embedded');
+  assert.equal(installBrowser('Mozilla/5.0 (Linux; Android 14) Chrome/121.0'), 'chrome');
+  assert.equal(installBrowser('Mozilla/5.0', 'MacIntel', 5), 'ios');
+  const originals = Object.fromEntries(['window', 'navigator', 'location'].map(k => [k, Object.getOwnPropertyDescriptor(globalThis, k)]));
+  const events = {};
+  let html = '', action, sheet, prompts = 0;
+  try {
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: { matchMedia: () => ({ matches: false, addEventListener() {} }), addEventListener: (n, f) => events[n] = f } });
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { userAgent: 'Android SamsungBrowser/25.0 Chrome/121', platform: 'Linux', maxTouchPoints: 5 } });
+    Object.defineProperty(globalThis, 'location', { configurable: true, value: { href: 'https://example.com/talbot/' } });
+    const install = createInstall({ openSheet(content, handler) { html = content; action = handler; sheet = { isConnected: true, querySelectorAll: () => [] }; return sheet; }, closeSheet() { sheet.isConnected = false; }, onChange() {} });
+    assert.match(install.card(), /איך מוסיפים אייקון/);
+    install.open();
+    assert.match(html, /Add page to/);
+    await action('missing');
+    assert.match(html, /אין צורך להמשיך לחפש/);
+    events.beforeinstallprompt({ preventDefault() {}, prompt: async () => { prompts++; }, userChoice: Promise.resolve({ outcome: 'dismissed' }) });
+    assert.match(html, /native-install/); // The already-open guide updates.
+    await action('native-install');
+    assert.equal(prompts, 1);
+    assert.doesNotMatch(install.card(), /הברידג׳ שלך מוכן/);
+    events.beforeinstallprompt({ preventDefault() {}, prompt: async () => { prompts++; }, userChoice: Promise.resolve({ outcome: 'accepted' }) });
+    await install.open();
+    assert.equal(prompts, 2);
+    assert.match(html, /הברידג׳ מוכן לפתיחה/);
+    assert.doesNotMatch(html, /native-install/);
+  } finally {
+    for (const [key, descriptor] of Object.entries(originals)) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key];
+    }
+  }
+});
