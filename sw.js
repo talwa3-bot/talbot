@@ -1,6 +1,6 @@
 // שמירה לעבודה גם בלי אינטרנט. כל שינוי גרסה מרענן את המטמון.
 const PREFIX = `talbot-bridge:${self.registration.scope}:`;
-const VERSION = `${PREFIX}v6`;
+const VERSION = `${PREFIX}v7`;
 const ASSETS = [
   './', './index.html', './styles.css', './manifest.webmanifest', './icons/icon.svg', './icons/icon-180.png',
   './icons/icon-192.png', './icons/icon-512.png', './src/ui/install.js', './src/ui/app.js', './src/ai/client.js', './src/ai/worker.js', './src/ai/core.js', './src/ai/bid-ai.js', './src/ai/play-ai.js',
@@ -9,7 +9,7 @@ const ASSETS = [
   './vendor/bridge-solver/bridge_solver_wasm.js', './vendor/bridge-solver/bridge_solver_wasm_bg.wasm',
 ];
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ASSETS.map(path => new Request(new URL(path, self.registration.scope), { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith(PREFIX) && k !== VERSION).map((k) => caches.delete(k))))
