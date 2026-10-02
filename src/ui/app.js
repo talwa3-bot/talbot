@@ -33,6 +33,8 @@ let hintCard = null;
 let loopToken = 0;
 
 const app = /** @type {HTMLElement} */ (document.getElementById('app'));
+const wideLayout = window.matchMedia('(min-width: 1000px)');
+wideLayout.addEventListener('change', () => { if (view === 'table') render(); });
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const SPEEDS = { slow: { bid: 1100, card: 1200, trick: 2200 }, normal: { bid: 700, card: 750, trick: 1500 }, fast: { bid: 300, card: 350, trick: 900 } };
@@ -357,6 +359,7 @@ function renderTable() {
 
   const north = dummyShown && dummySeat === 0 ? dummyHtml(0) : backs(0);
   const ewDummy = dummyShown && (dummySeat === 1 || dummySeat === 3) ? dummyHtml(dummySeat) : '';
+  const side = wideLayout.matches; // במסך רחב הדומם יושב בצד שלו
 
   // מעגן
   let dock = '';
@@ -396,10 +399,10 @@ function renderTable() {
     </header>
     <section class="felt">
       <div class="area-n">${seatTag(0)}${north}</div>
-      <div class="area-d">${ewDummy}</div>
-      <div class="area-w">${seatTag(3)}</div>
+      <div class="area-d">${side ? '' : ewDummy}</div>
+      <div class="area-w">${seatTag(3)}${side && dummySeat === 3 ? ewDummy : ''}</div>
       <div class="area-c">${center}</div>
-      <div class="area-e">${seatTag(1)}</div>
+      <div class="area-e">${seatTag(1)}${side && dummySeat === 1 ? ewDummy : ''}</div>
       <div class="area-s">${myHand()}${seatTag(2)}</div>
     </section>
     <footer class="dock">${dock}</footer>
