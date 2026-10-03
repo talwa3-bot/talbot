@@ -1,0 +1,231 @@
+<title>פרומפטר מפגש 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Rubik:wght@500;700&display=swap">
+<style>
+/* Layout: one dark stage, a fixed reading line at 38% height, text column scrolls up under it; status bar on top, controls at bottom. Single dark theme by choice (prompter convention). */
+:root{
+  --bg:#0B0F17;
+  --stage:#0E1420;
+  --ink:#F2F5FA;
+  --muted:#8E9AB0;
+  --accent:#487CFF;
+  --accent-soft:#6296FF;
+  --dir:#E6B85C;
+  --ok:#3ECF8E;
+  --warn:#F2A93B;
+  --line:rgba(72,124,255,.16);
+  --chip:#16203A;
+  --border:#22314F;
+  --f-body:"Assistant","Arial Hebrew","Segoe UI",Arial,sans-serif;
+  --f-ui:"Rubik","Assistant","Segoe UI",Arial,sans-serif;
+  --fs:44px;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);overflow:hidden}
+.app{position:relative;height:100%;display:flex;flex-direction:column}
+.bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;background:var(--bg);border-bottom:1px solid var(--border);font-family:var(--f-ui);z-index:5}
+.slideno{font-weight:700;color:var(--accent-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
+.slidetitle{font-weight:500;min-width:0;flex:1 1 200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.timers{display:flex;gap:14px;font-variant-numeric:tabular-nums;color:var(--muted);font-size:15px;white-space:nowrap}
+.timers b{color:var(--ink);font-weight:700}
+.timers .over b{color:var(--warn)}
+.state{font-size:13px;letter-spacing:.06em;padding:4px 10px;border-radius:999px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.state.on{background:rgba(62,207,142,.15);color:var(--ok)}
+.viewport{position:relative;flex:1;overflow:hidden;background:var(--stage)}
+.viewport.mirror .scroller{transform:scaleX(-1)}
+.scroller{position:absolute;inset:0;overflow-y:scroll;scrollbar-width:none;padding-inline:16px}
+.scroller::-webkit-scrollbar{display:none}
+.readline{position:absolute;left:0;right:0;top:38%;height:calc(var(--fs) * 1.9);transform:translateY(-35%);background:var(--line);border-block:1px solid rgba(72,124,255,.35);pointer-events:none;z-index:2}
+.readline::before{content:"";position:absolute;inset-inline-start:0;top:50%;transform:translateY(-50%);border:12px solid transparent;border-inline-start-color:var(--accent)}
+.fade{position:absolute;left:0;right:0;pointer-events:none;z-index:3}
+.fade.top{top:0;height:18%;background:linear-gradient(var(--stage),transparent)}
+.fade.bot{bottom:0;height:22%;background:linear-gradient(transparent,var(--stage))}
+.text{max-width:min(28em,100%);margin:0 auto;padding-top:38vh;padding-bottom:60vh;font-size:var(--fs);line-height:1.5}
+.slide{padding-block:.6em 1.2em;border-top:1px dashed var(--border)}
+.slide:first-child{border-top:0}
+.head{display:flex;align-items:baseline;gap:.5em;flex-wrap:wrap;font-family:var(--f-ui);font-size:.62em;color:var(--accent-soft);margin-bottom:.4em}
+.head .num{font-weight:700;font-variant-numeric:tabular-nums}
+.head .ttl{color:var(--ink);font-weight:700;text-wrap:balance}
+.head .min{color:var(--muted);font-weight:500;font-size:.75em}
+.meta{font-size:.42em;line-height:1.5;color:var(--muted);margin:.2em 0 .6em;max-width:48ch}
+.meta b{color:var(--ink);font-weight:700}
+.say{margin:0 0 .55em;font-weight:600}
+.dir{margin:0 0 .6em;font-size:.6em;font-style:italic;color:var(--dir)}
+.dir::before{content:"◆ ";font-style:normal;font-size:.8em}
+.quiz{display:inline-block;margin:.1em 0 .7em;font-family:var(--f-ui);font-size:.45em;padding:.35em .8em;border-radius:999px;background:rgba(72,124,255,.18);color:var(--accent-soft);border:1px solid rgba(72,124,255,.4)}
+.next{margin:.4em 0 0;font-size:.62em;color:var(--accent-soft)}
+.next::before{content:"מעבר ← ";font-family:var(--f-ui);font-size:.75em;color:var(--muted)}
+.end{text-align:center;color:var(--muted);font-family:var(--f-ui);font-size:.6em;padding-top:2em}
+.controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--border);z-index:5}
+.controls button{font-family:var(--f-ui);font-size:15px;color:var(--ink);background:var(--chip);border:1px solid var(--border);border-radius:10px;padding:8px 12px;cursor:pointer;min-width:44px;display:inline-flex;align-items:center;gap:6px}
+.controls button:hover{border-color:var(--accent)}
+.controls button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.controls .play{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;min-width:110px;justify-content:center}
+.controls kbd{font-family:var(--f-ui);font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:0 4px}
+.controls .play kbd{color:#dfe7ff;border-color:rgba(255,255,255,.4)}
+.readout{font-family:var(--f-ui);font-size:14px;color:var(--muted);align-self:center;font-variant-numeric:tabular-nums;padding-inline:6px}
+.hint{position:absolute;inset:auto 0 26% 0;margin:auto;width:fit-content;max-width:calc(100% - 32px);z-index:4;background:rgba(14,20,32,.92);border:1px solid var(--border);border-radius:14px;padding:14px 20px;font-family:var(--f-ui);font-size:16px;color:var(--muted);text-align:center;line-height:1.7}
+.hint b{color:var(--ink)}
+.hint kbd{font-family:var(--f-ui);color:var(--ink);border:1px solid var(--border);border-radius:5px;padding:1px 6px;margin-inline:2px}
+.index{position:absolute;inset-block:0;inset-inline-end:0;width:min(340px,90%);background:var(--bg);border-inline-start:1px solid var(--border);z-index:6;overflow-y:auto;padding:12px}
+.index button{display:flex;width:100%;gap:10px;text-align:start;background:none;border:0;border-radius:8px;color:var(--ink);font-family:var(--f-ui);font-size:15px;padding:8px 10px;cursor:pointer}
+.index button:hover,.index button.cur{background:var(--chip)}
+.index .n{color:var(--accent-soft);font-variant-numeric:tabular-nums;min-width:2ch}
+@media (max-width:600px){:root{--fs:30px}.timers{font-size:13px}.controls button{padding:7px 9px;font-size:14px}.controls kbd{display:none}}
+@media (prefers-reduced-motion:reduce){.scroller{scroll-behavior:auto}}
+</style>
+
+<div class="app" dir="rtl" lang="he">
+  <header class="bar">
+    <span class="slideno" id="slideno">1/37</span>
+    <span class="slidetitle" id="slidetitle"></span>
+    <span class="timers">
+      <span id="slideTimer">בשקופית <b>0:00</b> / 0:00</span>
+      <span>במפגש <b id="totalTimer">0:00</b></span>
+    </span>
+    <span class="state" id="state">מושהה</span>
+  </header>
+
+  <div class="viewport" id="viewport">
+    <div class="scroller" id="scroller"><div class="text" id="text"></div></div>
+    <div class="readline"></div>
+    <div class="fade top"></div><div class="fade bot"></div>
+    <div class="hint" id="hint"><b>רווח</b> מפעיל ועוצר · <kbd>↑</kbd><kbd>↓</kbd> מהירות · <kbd>+</kbd><kbd>-</kbd> גודל אות · <kbd>PgDn</kbd><kbd>PgUp</kbd> שקופית הבאה וקודמת<br>אפשר לגלול ידנית בעכבר בכל רגע</div>
+    <nav class="index" id="index" hidden></nav>
+  </div>
+
+  <footer class="controls">
+    <button id="bPrev" title="שקופית קודמת">⏮ קודמת <kbd>PgUp</kbd></button>
+    <button id="bSlow" title="לאט יותר">🐢 <kbd>↓</kbd></button>
+    <button class="play" id="bPlay">▶ הפעלה <kbd>רווח</kbd></button>
+    <button id="bFast" title="מהר יותר">🐇 <kbd>↑</kbd></button>
+    <button id="bNext" title="שקופית הבאה">הבאה ⏭ <kbd>PgDn</kbd></button>
+    <span class="readout" id="readout">מהירות 4 · אות 44</span>
+    <button id="bSmaller" title="אות קטנה יותר">א- <kbd>-</kbd></button>
+    <button id="bBigger" title="אות גדולה יותר">א+ <kbd>+</kbd></button>
+    <button id="bIndex" title="רשימת שקופיות">☰ שקופיות <kbd>I</kbd></button>
+    <button id="bMirror" title="היפוך מראה לזכוכית פרומפטר">⇋ מראה <kbd>M</kbd></button>
+    <button id="bFull" title="מסך מלא">⛶ <kbd>F</kbd></button>
+  </footer>
+</div>
+
+<script>
+const DATA = [{"n": 1, "t": "פתיחה: העסק שלכם מקבל פנים", "min": 3, "goal": "לחבר את המפגש לאפיון העסק ממפגש 2 ולהציג את ההבטחה: יוצאים עם ערכה ביד.", "prep": "פותחים מראש: אפליקציית הקורס במסך המרצה, קלוד, Stitch, גאמה, ג'מיני, HeyGen ו-ElevenLabs, כל אחד בלשונית. קובץ ההדבקות לצ'אט פתוח.", "lines": [{"k": "say", "t": "ערב טוב לכולם! היום אחד המפגשים הכי כיפיים בקורס."}, {"k": "say", "t": "במפגש הקודם כתבתם אפיון לעסק שלכם, או למותג שלכם. מילים."}, {"k": "say", "t": "היום המילים האלה מקבלות פנים: צבעים, אפליקציה, מצגת, תמונה, קול, ואפילו אתם בסרטון. בלי מעצב, בלי מצלמה ובלי עורך."}, {"k": "say", "t": "כתבו בצ'אט במילה אחת: על איזה עסק אתם עובדים?"}, {"k": "dir", "t": "מקריאים כמה תשובות מהצ'אט"}, {"k": "say", "t": "מעולה. תשאירו את האפיון פתוח, נשתמש בו כל הערב."}], "do": null, "next": "אבל לפני הכול, מה קרה השבוע בעולם.", "game": null}, {"n": 2, "t": "מה חדש השבוע ב-AI", "min": 5, "goal": "להראות שהתחום זז מהר, ולחבר חדשות לנושא של היום.", "prep": "לפני המפגש: לעדכן את החדשות בשקופית לשבוע הנוכחי (בקשו מפרפלקסיטי: \"5 חדשות AI מהשבוע האחרון למתחילים, עם מקור\").", "lines": [{"k": "say", "t": "כמו בכל מפגש, חמש דקות של מה חדש."}, {"k": "say", "t": "הכותרת הגדולה: ElevenLabs הוציאו מודל קול חדש, v4. קול אנושי, עם רגש והדגשות, ב-90 שפות. עוד מעט נשמע אותו."}, {"k": "say", "t": "ובצד: Sora של OpenAI, כלי הווידאו המפורסם, נסגר. זה שיעור חשוב: כלים באים והולכים, אז שומרים עותק של כל מה שיוצרים."}, {"k": "say", "t": "מטא הוציאו Muse, עוזר אישי עם אווטאר מדבר. וגוגל ממשיכה עם Gemini Omni, שהופך כל דבר לווידאו."}, {"k": "say", "t": "כתבו בצ'אט: איזו מהחדשות הכי מסקרנת אתכם?"}, {"k": "dir", "t": "מקריאים את המנצחת ומקדישים לה דקה"}], "do": null, "next": "אז הנה מה שאנחנו בונים היום.", "game": null}, {"n": 3, "t": "המסע של היום", "min": 2, "goal": "מפת דרך ברורה, והבטחה של ערכה מוחשית בסוף.", "prep": null, "lines": [{"k": "say", "t": "שש תחנות, ובכל אחת תוצר."}, {"k": "say", "t": "מותג בקלוד. אפליקציה ב-Stitch. מצגת והצעת מחיר בגאמה. תמונת פרופיל ולינקדאין. קול ואווטאר. ובסוף וידאו, כתוביות ועריכה."}, {"k": "say", "t": "בצד שמאל, הערכה שלכם בסוף הערב: ערכת מותג, מסך אפליקציה, מצגת, תמונת פרופיל וסרטון אווטאר קצר."}, {"k": "say", "t": "וכל תוצר נכנס לאתגר באפליקציית הקורס. הנקודות מצטברות לטבלה של כל הקורס."}], "do": null, "next": "ויש כלל אחד שחוסך שעות.", "game": null}, {"n": 4, "t": "הכלל: קודם תוכן, אחר כך עיצוב", "min": 2, "goal": "לקבע את העיקרון שהאפיון מוביל את העיצוב.", "prep": null, "lines": [{"k": "say", "t": "הטעות הכי נפוצה בכלים ויזואליים: פותחים כלי ומבקשים \"תעשה לי משהו יפה\". יוצא יפה, וריק."}, {"k": "say", "t": "הדרך הנכונה: לוקחים את האפיון, מבקשים מה-AI להפוך אותו לשפה ויזואלית, ואז משתמשים באותה שפה בכל הכלים."}, {"k": "say", "t": "אין לכם אפיון? אין בעיה. כתבו עכשיו בצ'אט, או אצלכם בצד, שלוש שורות: מה העסק, למי הוא, ואיך הוא צריך להרגיש."}], "do": null, "next": "אז נתחיל במותג.", "game": null}, {"n": 5, "t": "פרק 1: המותג שלכם", "min": 0.5, "goal": "מעבר לפרק.", "prep": null, "lines": [{"k": "say", "t": "פרק ראשון: המותג. צבעים, פונטים וטון. עשר דקות."}], "do": null, "next": "ההנחיה כבר בצ'אט.", "game": null}, {"n": 6, "t": "ערכת מותג בקלוד", "min": 9, "goal": "שכל משתתף ייצא עם 5 צבעים, 2 פונטים, טון ורעיון ללוגו.", "prep": null, "lines": [{"k": "say", "t": "ההנחיה בצ'אט. העתיקו אותה."}, {"k": "dir", "t": "מדביקים את ההנחיה בצ'אט"}, {"k": "say", "t": "שימו לב איך היא בנויה, לפי מי, מה, איך: האפיון שלכם, ואז בקשה מדויקת: 5 צבעים עם קוד HEX ומה כל צבע מבטא, 2 פונטים חינמיים בעברית, 3 מילים לטון, ורעיון ללוגו. ובסוף: \"הצג את הכול כדף ויזואלי אחד\"."}, {"k": "say", "t": "אני מדגימה על עסק לדוגמה."}, {"k": "dir", "t": "מריצים בקלוד בשידור חי ומראים את דף המותג שנוצר"}, {"k": "say", "t": "ראיתם? הוא לא רק כתב, הוא בנה דף שאפשר לראות. ועכשיו משפרים בשיחה: \"פחות רשמי\". \"צבע ראשי חם יותר\"."}, {"k": "say", "t": "עכשיו תורכם. שש דקות. ושמרו את קודי הצבע, הם ילוו אותנו כל הערב."}, {"k": "dir", "t": "טיימר של 6 דקות. מי שנתקע כותב \"עזרה\" בצ'אט"}, {"k": "say", "t": "הדביקו באפליקציה, באתגר \"ערכת מותג\", את ההנחיה שעבדה לכם הכי טוב."}], "do": null, "next": "יש מותג. עכשיו נבנה לו אפליקציה.", "game": "פותחים את האתגר \"ערכת מותג\"."}, {"n": 7, "t": "פרק 2: האפליקציה שלכם", "min": 0.5, "goal": "מעבר לפרק.", "prep": null, "lines": [{"k": "say", "t": "פרק שני, ואחד הרגעים הכי מרשימים בקורס: אפליקציה, מתוך תיאור במילים."}], "do": null, "next": "הכירו את Stitch.", "game": null}, {"n": 8, "t": "Google Stitch", "min": 10, "goal": "שכל משתתף ייצר לפחות מסך אפליקציה אחד לעסק שלו.", "prep": "Stitch פתוח ומחובר לחשבון גוגל. דוגמה מוכנה מראש לגיבוי.", "lines": [{"k": "say", "t": "Stitch הוא כלי חינמי של גוגל. מתארים לו אפליקציה במילים, והוא מעצב את המסכים."}, {"k": "say", "t": "ארבעה שלבים."}, {"k": "say", "t": "אחת: נכנסים ל-stitch.withgoogle.com עם חשבון גוגל. הקישור בצ'אט."}, {"k": "say", "t": "שתיים: מדביקים את ההנחיה. שימו לב: היא באנגלית, ומבקשת עברית ו-RTL. ככה התוצאה הכי מדויקת. ממלאים בה שורה מהאפיון ואת קודי הצבע מהמותג."}, {"k": "dir", "t": "מדביקים את ההנחיה בצ'אט, ומדגימים בשידור חי"}, {"k": "say", "t": "שלוש: מקבלים שלושה מסכים: בית, מוצר, יצירת קשר."}, {"k": "say", "t": "ארבע: משפרים במילים, \"כפתור בולט יותר\", ומשתפים קישור."}, {"k": "say", "t": "יש לכם שמונה דקות. מי שמסיים, מוזמן להירשם להגרלה. תכף אסביר."}, {"k": "dir", "t": "טיימר של 8 דקות. עוזרים בצ'אט"}], "do": null, "next": "ועכשיו, מי רוצה להראות?", "game": null}, {"n": 9, "t": "הגרלת מציגים", "min": 6, "goal": "שלושה משתתפים מציגים את האפליקציה שבנו, בתחושה של תחרות.", "prep": null, "lines": [{"k": "say", "t": "מי רוצה להראות את האפליקציה שבנה? נכנסים לאפליקציית הקורס, ללשונית \"הגרלה\"."}, {"k": "say", "t": "לוחצים \"אני רוצה להציג\", ומדביקים את קישור השיתוף מ-Stitch."}, {"k": "dir", "t": "מחכים שתי דקות, משתפים את מסך ההגרלה"}, {"k": "say", "t": "ו... מגרילים!"}, {"k": "dir", "t": "לוחצים \"הגרל 3\". כל מוגרל משתף מסך לדקה"}, {"k": "say", "t": "ספר לנו: מה העסק, ומה הכי הפתיע אותך?"}, {"k": "dir", "t": "אחרי כל מציג: מחיאות כפיים בתגובות של הזום"}, {"k": "say", "t": "כל מי שהוגרל קיבל 30 נקודות בטבלה של הקורס."}], "do": null, "next": "מאפליקציה למצגת.", "game": "פותחים את ההרשמה בלשונית \"הגרלה\", ואחרי 2 דקות לוחצים \"הגרל 3\"."}, {"n": 10, "t": "פרק 3: מצגת והצעת מחיר", "min": 0.5, "goal": "מעבר לפרק.", "prep": null, "lines": [{"k": "say", "t": "פרק שלישי: מצגת והצעת מחיר. שני מסמכים שכל עסק צריך."}], "do": null, "next": "שלושה כלים, ומתי כל אחד.", "game": null}, {"n": 11, "t": "שלושה כלים למצגות", "min": 4, "goal": "להבין מתי לבחור גאמה, קנבה או קופיילוט.", "prep": null, "lines": [{"k": "say", "t": "שלושתם בונים מצגת מטקסט. ההבדל הוא מאיפה מתחילים."}, {"k": "say", "t": "גאמה: יש לכם תוכן ורוצים מצגת מהר. מתחילים מטקסט או ממסמך. יש קרדיטים חינמיים בהתחלה."}, {"k": "say", "t": "קנבה: רוצים עיצוב מדויק ומיתוג. יש תבניות לכל דבר, ועברית טובה."}, {"k": "say", "t": "קופיילוט בתוך פאוורפוינט: עובדים בארגון עם אופיס. הופך קובץ וורד למצגת. בתשלום, דרך מיקרוסופט 365."}, {"k": "dir", "t": "אם יש זמן: מראים לעשר שניות את קנבה ואת קופיילוט"}, {"k": "say", "t": "היום עובדים בגאמה, כי הוא הכי מהיר מאפיון למצגת."}], "do": null, "next": "אז בואו נבנה.", "game": null}, {"n": 12, "t": "מצגת לעסק בגאמה", "min": 8, "goal": "מצגת של 6 שקפים לכל משתתף, בצבעי המותג.", "prep": "חשבון גאמה מחובר. מצגת לדוגמה מוכנה לגיבוי.", "lines": [{"k": "say", "t": "ההנחיה בצ'אט. מבנה של 6 שקפים: הבעיה, הפתרון, למי זה מתאים, איך זה עובד, מחירים, וקריאה לפעולה."}, {"k": "dir", "t": "מדביקים בצ'אט"}, {"k": "say", "t": "בגאמה: Create new, ואז Paste in text. מדביקים, בוחרים ערכת עיצוב ומתאימים לצבעים שלכם."}, {"k": "dir", "t": "מדגימים בשידור חי"}, {"k": "say", "t": "ועכשיו הקסם: לוחצים על שקף, ומבקשים מה-AI \"קצר את הטקסט, הוסף אייקון\"."}, {"k": "say", "t": "יש לכם 8 דקות. לא צריך מושלם, צריך מצגת שהייתם שולחים ללקוח."}, {"k": "dir", "t": "טיימר. בסוף: מדביקים את קישור השיתוף בצ'אט"}], "do": null, "next": "ומצגת מובילה להצעת מחיר.", "game": null}, {"n": 13, "t": "הצעת מחיר ללקוח", "min": 6, "goal": "ללמד תהליך של שני שלבים: תוכן מדויק, ואז מסמך מעוצב.", "prep": null, "lines": [{"k": "say", "t": "הצעת מחיר בשתי הנחיות."}, {"k": "say", "t": "הראשונה, התוכן, בקלוד או בצ'אט ג'יפיטי. היא בצ'אט: פתיח אישי, טבלת שירותים ומחירים, מה כלול ומה לא, תנאי תשלום ותוקף."}, {"k": "dir", "t": "מדביקים ומריצים בשידור חי"}, {"k": "say", "t": "ואז כלל 5 ממפגש 2: \"מה חסר? מה הלקוח ישאל אחרי שיקרא?\""}, {"k": "say", "t": "השנייה: מעבירים את התוכן לגאמה או לקנבה, כ-Document, עם צבעי המותג. ומורידים PDF."}, {"k": "say", "t": "ושימו לב למשבצת הצהובה: ה-AI לא יודע את המחירים שלכם. מספרים תמיד ממלאים ובודקים בעצמכם."}], "do": null, "next": "הפסקה קצרה.", "game": null}, {"n": 14, "t": "הפסקה", "min": 5, "goal": "מנוחה ורענון באמצע מפגש עמוס.", "prep": null, "lines": [{"k": "say", "t": "חמש דקות הפסקה. השאירו את הכלים פתוחים. אחרי ההפסקה: תמונות, קול, אווטאר ווידאו."}], "do": "מפעילים טיימר של 5 דקות על המסך.", "next": "ברוכים השבים. עכשיו, תמונות.", "game": null}, {"n": 15, "t": "פרק 4: תמונות", "min": 0.5, "goal": "מעבר לפרק.", "prep": null, "lines": [{"k": "say", "t": "פרק רביעי: תמונות. תמונה לעסק, ותמונה שלכם."}], "do": null, "next": "שלושה מחוללים, הנחיה אחת.", "game": null}, {"n": 16, "t": "איך AI מצייר", "min": 3, "goal": "להבין את ההיגיון של מחולל תמונות: מרעש לתמונה.", "prep": null, "lines": [{"k": "say", "t": "לפני שמייצרים, רגע של היגיון. איך AI מצייר?"}, {"k": "say", "t": "הוא לא מצייר כמו בן אדם. הוא מתחיל מרעש, כמו שלג בטלוויזיה ישנה."}, {"k": "say", "t": "ואז, צעד אחרי צעד, הוא \"מנקה\" את הרעש לכיוון התיאור שלכם. קודם צורות, אחר כך פרטים, ובסוף תמונה."}, {"k": "say", "t": "המודל למד את זה ממיליוני תמונות עם תיאורים. הוא יודע איך \"חתול\" נראה, אבל לא סופר אצבעות."}, {"k": "say", "t": "ולכן שלושה דברים: ידיים וטקסט בתמונה נכשלים לפעמים, כל הרצה יוצאת שונה, ותיאור מדויק נותן תמונה מדויקת."}, {"k": "say", "t": "כתבו בצ'אט: מי כבר קיבל פעם יד עם שש אצבעות? 😄"}], "do": null, "next": "ועכשיו, שלושה מחוללים.", "game": null}, {"n": 17, "t": "שלושה מחוללי תמונות", "min": 5, "goal": "להשוות בין המחוללים בשידור חי, ולבחור כלי לפי מטרה.", "prep": "צ'אט ג'יפיטי וג'מיני פתוחים. תוצאה מוכנה מ-Grok Imagine (כלי בתשלום).", "lines": [{"k": "say", "t": "צ'אט ג'יפיטי חזק בטקסט בתוך תמונה, ובעריכה בשיחה. מצוין לבאנרים ולפוסטים."}, {"k": "say", "t": "ג'מיני, עם המודל שנקרא Nano Banana, חזק בעריכת תמונה קיימת ובשמירה על הפנים. מצוין לתמונת פרופיל."}, {"k": "say", "t": "ו-Grok Imagine, נועז ומהיר, גם וידאו. אבל מאז מרץ הוא בתשלום, אז אני מראה תוצאה מוכנה."}, {"k": "say", "t": "אותה הנחיה בשלושתם: \"לוגו מינימליסטי לעסק, בצבעי המותג, על רקע לבן, בלי טקסט\"."}, {"k": "dir", "t": "מריצים בצ'אט ג'יפיטי ובג'מיני, ומראים את התוצאה של גרוק"}, {"k": "say", "t": "הצביעו בצ'אט: 1, 2 או 3. איזו הייתם שמים על כרטיס ביקור?"}], "do": null, "next": "ועכשיו, התמונה הכי חשובה: שלכם.", "game": null}, {"n": 18, "t": "תמונת פרופיל ולינקדאין", "min": 8, "goal": "שכל משתתף ייצר תמונת פרופיל מקצועית מסלפי.", "prep": null, "lines": [{"k": "say", "t": "שתי הנחיות, שתיהן בצ'אט."}, {"k": "say", "t": "לינקדאין: רקע אפור מטושטש, תאורה רכה, לבוש מקצועי, חיוך טבעי. והמשפט הכי חשוב: \"שמור על הפנים שלי בדיוק כמו שהן\"."}, {"k": "say", "t": "ופרופיל לעסק: רקע בצבע המותג, בסגנון של העסק."}, {"k": "say", "t": "מצלמים סלפי עכשיו, באור טוב, ומעלים לג'מיני או לצ'אט ג'יפיטי."}, {"k": "dir", "t": "מדגימים על עצמכם בשידור חי"}, {"k": "say", "t": "והכלל במשבצת הצהובה: מעלים רק תמונה של עצמכם."}, {"k": "say", "t": "יש לכם 6 דקות. הדביקו את ההנחיה הכי טובה באתגר."}], "do": null, "next": "יש לכם פנים. עכשיו קול.", "game": "פותחים את האתגר \"הנחיה לתמונת פרופיל\"."}, {"n": 19, "t": "פרק 5: קול ואווטאר", "min": 0.5, "goal": "מעבר לפרק.", "prep": null, "lines": [{"k": "say", "t": "פרק חמישי: הקול שלכם והפנים שלכם, בדיגיטל."}], "do": null, "next": "נתחיל בקול.", "game": null}, {"n": 20, "t": "ElevenLabs: קול לעסק", "min": 6, "goal": "להכיר יצירת קריינות, ולהבין את ההבדל בין קול מוכן לשכפול קול.", "prep": "ElevenLabs פתוח בחשבון חינמי, עם משפט לדוגמה מוכן.", "lines": [{"k": "say", "t": "ElevenLabs הוא כלי הקול המוביל בעולם."}, {"k": "say", "t": "בחינם: בוחרים קול מוכן מהספרייה, מדביקים טקסט, ובוחרים את המודל החדש, v3 או v4, שתומכים בעברית."}, {"k": "dir", "t": "מדגימים: אותו משפט בשלושה קולות. הקהל מצביע בצ'אט"}, {"k": "say", "t": "רק להכיר: בתשלום אפשר גם לשבט את הקול שלכם מהקלטה של דקה. אנחנו נשארים בחינם, והאווטאר שנבנה עוד רגע ידבר בקול שלכם."}, {"k": "dir", "t": "בשיתוף מסך מסמנים \"שיתוף צליל\", אחרת לא ישמעו"}, {"k": "say", "t": "והכלל: משבטים רק את הקול שלכם. אף פעם של אדם אחר."}], "do": null, "next": "ועכשיו, הרגע הכי מטורף של הערב: אתם, בווידאו, בלי מצלמה.", "game": null}, {"n": 21, "t": "אווטאר: HeyGen, D-ID, Gemini Omni", "min": 9, "goal": "שכל משתתף ייצר סרטון אווטאר קצר שמציג את העסק.", "prep": "HeyGen פתוח. תאום דיגיטלי שלכם מוכן מראש להדגמה.", "lines": [{"k": "say", "t": "שלושה כלים."}, {"k": "say", "t": "HeyGen: יוצרים תאום דיגיטלי שלכם, אווטאר שנראה ומדבר כמוכם. בחינם: אווטאר אחד ושלושה סרטונים בחודש, עד דקה."}, {"k": "say", "t": "D-ID: לוקחים תמונה, והיא מתחילה לדבר. יש ניסיון של 14 יום."}, {"k": "say", "t": "Gemini Omni של גוגל: וידאו מכל דבר, גם אווטאר. חינם בתוך YouTube Create."}, {"k": "dir", "t": "מראים את התאום הדיגיטלי שלכם מדבר"}, {"k": "say", "t": "היום עושים ב-HeyGen. קודם התסריט: ההנחיה בצ'אט, 20 שניות, משפט פתיחה שתופס, תועלת אחת וקריאה לפעולה."}, {"k": "say", "t": "ואז ב-HeyGen: מעלים סרטון קצר או תמונה, מדביקים את התסריט, ומייצרים."}, {"k": "dir", "t": "טיימר של 7 דקות. מי שמסיים מדביק את התסריט באתגר"}], "do": null, "next": "ועכשיו, וידאו ועריכה.", "game": "פותחים את האתגר \"תסריט 20 שניות לאווטאר\"."}, {"n": 22, "t": "פרק 6: וידאו ועריכה", "min": 0.5, "goal": "מעבר לפרק.", "prep": null, "lines": [{"k": "say", "t": "פרק אחרון: וידאו ועריכה."}], "do": null, "next": "שלושה כלים.", "game": null}, {"n": 23, "t": "וידאו בלי מצלמה ובלי עורך", "min": 4, "goal": "להכיר את כלי הווידאו והעריכה, בהדגמה.", "prep": null, "lines": [{"k": "say", "t": "Gemini Omni: הופך תמונה, טקסט או קול לווידאו, ועורכים אותו בשיחה: \"עכשיו בלילה\", \"תוסיף גשם\"."}, {"k": "say", "t": "Captions: מעלים סרטון גולמי, והוא מוסיף כתוביות, חותך שתיקות ומוסיף זום. ככה סרטון מהטלפון הופך לפוסט."}, {"k": "dir", "t": "מדגימים על סרטון האווטאר מקודם"}, {"k": "say", "t": "ו-Grok Imagine: סרטונים קצרים ונועזים. בתשלום, אז רק בהדגמה."}, {"k": "say", "t": "וזוכרים את Sora? שומרים עותק של כל מה שיוצרים."}], "do": null, "next": "ולסיום, הפיצ'ר החדש של קלוד.", "game": null}, {"n": 24, "t": "Claude Design: עריכה על הקנבס", "min": 4, "goal": "להכיר את העריכה הישירה של קלוד, כסגירת מעגל עם דף המותג.", "prep": "מנוי קלוד בתשלום, עם עיצוב פתוח להדגמה.", "lines": [{"k": "say", "t": "זוכרים את דף המותג מתחילת הערב? עכשיו הקטע החדש."}, {"k": "say", "t": "ב-Claude Design אפשר ללחוץ על כל אלמנט ולערוך אותו: טקסט, צבע, מיקום. כמו בפיגמה."}, {"k": "say", "t": "או פשוט לבקש בשיחה: \"הגדל את הכותרת, החלף לצבע המותג\"."}, {"k": "say", "t": "ובסוף מייצאים לפאוורפוינט, ל-PDF או לקישור."}, {"k": "dir", "t": "מדגימים: פותחים את דף המותג, ועורכים בקנבס"}, {"k": "say", "t": "זה עדיין בבטא, למנויים בתשלום. אפשר לנסות בחודש ניסיון."}], "do": null, "next": "ולפני שמפרסמים משהו, ארבעה כללים.", "game": null}, {"n": 25, "t": "ארבעה כללים לפני שמפרסמים", "min": 3, "goal": "שימוש אחראי: הסכמה, סימון, זכויות ובדיקה.", "prep": null, "lines": [{"k": "say", "t": "ויזואל של AI הוא כוח. ארבעה כללים."}, {"k": "say", "t": "רק אתם: קול ופנים משבטים רק של עצמכם, או באישור בכתב."}, {"k": "say", "t": "מסמנים: בפוסט או בסרטון כותבים שנעשה בעזרת AI."}, {"k": "say", "t": "לא מעתיקים: לא מבקשים \"בסגנון של\" אמן או מותג קיים."}, {"k": "say", "t": "ובודקים: ידיים, טקסט בתמונה, ומספרים בהצעת מחיר."}, {"k": "say", "t": "והכלל בירוק: אם הייתם מתביישים שהלקוח יגלה איך זה נוצר, אל תפרסמו."}], "do": null, "next": "ועכשיו, הגלריה.", "game": null}, {"n": 26, "t": "גלריית הערכות", "min": 6, "goal": "ללמוד מהתוצרים של המשתתפים, ולסגור את התחרות.", "prep": null, "lines": [{"k": "say", "t": "פתחתי הצבעה באפליקציה. יש לכם שלוש הצבעות."}, {"k": "dir", "t": "מחכים דקה וחצי"}, {"k": "say", "t": "שלושה מציגים בחרתי מהצ'אט. דקה לכל אחד: מה בניתם, ומה הפתיע אתכם."}, {"k": "dir", "t": "שלושה מציגים"}, {"k": "say", "t": "מה מחפשים? שפה ויזואלית אחידה בכל התוצרים, מסר ברור תוך 3 שניות, מתאים לקהל, ונראה אמין."}, {"k": "dir", "t": "חושפים תוצאות ומכריזים על המנצחים"}], "do": null, "next": "וכל הכלים של היום, במקום אחד.", "game": "פותחים הצבעה על האתגרים של הערב."}, {"n": 27, "t": "ארגז הכלים של היום", "min": 2, "goal": "לתת את כל הקישורים להעתקה.", "prep": null, "lines": [{"k": "say", "t": "כל הכלים של היום, עם קישורים להעתקה. חלקם נותנים לכם קרדיטים או ניסיון חינם כשנרשמים דרכם."}, {"k": "say", "t": "הקישורים בצ'אט, בחוברת, ובארגז הכלים באפליקציה."}, {"k": "dir", "t": "מדביקים את רשימת הקישורים בצ'אט"}], "do": null, "next": "ומשימת הבית.", "game": null}, {"n": 28, "t": "משימת בית: ערכת העסק המלאה", "min": 2, "goal": "להשלים את הערכה ולהכין את הקרקע לאוטומציה.", "prep": null, "lines": [{"k": "say", "t": "משימת הבית: להשלים את הערכה."}, {"k": "say", "t": "ערכת מותג. מסך אפליקציה ומצגת. תמונת פרופיל וסרטון אווטאר, ולפחות אחד מהם עולה ללינקדאין או לוואטסאפ."}, {"k": "say", "t": "ודבר רביעי, חשוב: רשמו משימה אחת שחוזרת אצלכם כל שבוע. בשבוע הבא נהפוך אותה לאוטומטית."}, {"k": "say", "t": "ולפני המפגש הבא: פותחים חשבון חינמי ב-Make, ומפעילים בג'מיני את Gmail, בהגדרות, תחת Apps. אשלח הודעה עם הקישורים."}, {"k": "say", "t": "העלו את הערכה לאפליקציה. היא תהיה חלק מיום ההצגות בסוף הקורס."}], "do": null, "next": "ולסיום, שלושה דברים.", "game": null}, {"n": 29, "t": "שלושה דברים לקחת הביתה", "min": 3, "goal": "סגירה עם שלושה מסרים, והכרזת מנצחים.", "prep": null, "lines": [{"k": "say", "t": "שלושה דברים."}, {"k": "say", "t": "קודם תוכן: אפיון טוב יוצר עיצוב טוב."}, {"k": "say", "t": "שפה אחת בכל הכלים: אותם צבעים ואותו טון בכל מקום."}, {"k": "say", "t": "ואתם במרכז: קול ופנים רק שלכם, מסמנים AI, ובודקים לפני שמפרסמים."}, {"k": "say", "t": "ועכשיו: טבלת הקורס!"}, {"k": "dir", "t": "משתפים את הטבלה ומכריזים"}, {"k": "say", "t": "היה מדהים. בשבוע הבא העסק שלכם מתחיל לעבוד לבד. נתראה!"}], "do": null, "next": "סוף המפגש. נשארים לשאלות.", "game": "משתפים את טבלת הקורס המצטברת."}];
+const $ = id => document.getElementById(id);
+const scroller = $("scroller"), textEl = $("text");
+const store = {get(k,d){try{const v=localStorage.getItem("prompter."+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem("prompter."+k,JSON.stringify(v))}catch(e){}}};
+
+let speed = store.get("speed", 4);      // 1..12
+let fs = store.get("fs", window.innerWidth < 600 ? 30 : 44);
+let playing = false, mirror = false, started = false, navUntil = 0;
+let lastT = null, acc = 0;
+let current = -1, slideStart = 0, slideAcc = 0, totalAcc = 0;
+
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = s => { s = Math.max(0, Math.floor(s)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
+
+// build text
+textEl.innerHTML = DATA.map((d,i) => {
+  let h = `<section class="slide" id="s${d.n}" data-i="${i}">
+    <div class="head"><span class="num">שקופית ${d.n}</span><span class="ttl">${esc(d.t)}</span><span class="min">${d.min} דק'</span></div>
+    <p class="meta"><b>מטרה:</b> ${esc(d.goal)}${d.prep ? `<br><b>הכנה:</b> ${esc(d.prep)}` : ""}</p>`;
+  d.lines.forEach(l => { h += l.k === "dir" ? `<p class="dir">${esc(l.t)}</p>` : `<p class="say">${esc(l.t)}</p>`; });
+  if (d.game) h += `<span class="quiz">🏆 ${esc(d.game)}</span>`;
+  if (d.do) h += `<p class="dir">${esc(d.do)}</p>`;
+  h += `<p class="next">${esc(d.next)}</p></section>`;
+  return h;
+}).join("") + `<p class="end">סוף המפגש · תודה 💙</p>`;
+
+$("index").innerHTML = DATA.map((d,i) => `<button data-i="${i}"><span class="n">${d.n}</span><span>${esc(d.t)}</span></button>`).join("");
+const sections = [...textEl.querySelectorAll(".slide")];
+
+function applyFs(){ document.documentElement.style.setProperty("--fs", fs+"px"); readout(); }
+function readout(){ $("readout").textContent = `מהירות ${speed} · אות ${fs}`; }
+function setPlaying(p){
+  playing = p; lastT = null; if (p) started = true;
+  $("state").textContent = p ? "רץ" : "מושהה";
+  $("state").classList.toggle("on", p);
+  $("bPlay").innerHTML = (p ? "⏸ עצירה" : "▶ הפעלה") + " <kbd>רווח</kbd>";
+  if (p) $("hint").hidden = true;
+}
+function readY(){ return scroller.scrollTop + scroller.clientHeight * 0.38; }
+function goTo(i){
+  i = Math.max(0, Math.min(sections.length-1, i));
+  setCurrent(i); navUntil = performance.now() + 700;
+  const target = sections[i].offsetTop - scroller.clientHeight*0.38 + 4;
+  scroller.scrollTo({top: target, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+}
+function detect(){
+  if (performance.now() < navUntil) return;
+  const y = readY(); let idx = 0;
+  for (let i=0;i<sections.length;i++){ if (sections[i].offsetTop <= y) idx = i; else break; }
+  setCurrent(idx);
+}
+function setCurrent(idx){
+  if (idx !== current){
+    current = idx; slideAcc = 0;
+    const d = DATA[idx];
+    $("slideno").textContent = `${d.n}/${DATA.length}`;
+    $("slidetitle").textContent = d.t;
+    document.querySelectorAll(".index button").forEach(b => b.classList.toggle("cur", +b.dataset.i === idx));
+  }
+}
+function tick(t){
+  if (lastT == null) lastT = t;
+  const dt = Math.min(0.1, (t - lastT)/1000); lastT = t;
+  if (playing){
+    // pixels per second scale with font size so a speed level means similar reading pace at any size
+    acc += speed * fs * 0.075 * dt;
+    if (acc >= 1){ const px = Math.floor(acc); acc -= px; scroller.scrollTop += px; }
+    if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) setPlaying(false);
+  }
+  if (started){ slideAcc += dt; totalAcc += dt; }
+  detect();
+  const plan = DATA[current] ? DATA[current].min*60 : 0;
+  const st = $("slideTimer");
+  st.innerHTML = `בשקופית <b>${fmt(slideAcc)}</b> / ${fmt(plan)}`;
+  st.classList.toggle("over", slideAcc > plan);
+  $("totalTimer").textContent = fmt(totalAcc);
+  requestAnimationFrame(tick);
+}
+
+function faster(d){ speed = Math.max(1, Math.min(12, speed + d)); store.set("speed", speed); readout(); }
+function bigger(d){ fs = Math.max(20, Math.min(90, fs + d)); store.set("fs", fs); const i = current; applyFs(); requestAnimationFrame(()=>goTo(i)); }
+function toggleFull(){ const el = document.documentElement; if (!document.fullscreenElement){ el.requestFullscreen?.().catch(()=>{}); } else { document.exitFullscreen?.().catch(()=>{}); } }
+function toggleIndex(){ $("index").hidden = !$("index").hidden; }
+
+document.addEventListener("keydown", e => {
+  if (e.target.closest && e.target.closest("input,textarea")) return;
+  const k = e.key;
+  if (k === " " || k === "Spacebar"){ e.preventDefault(); setPlaying(!playing); }
+  else if (k === "ArrowUp"){ e.preventDefault(); faster(1); }
+  else if (k === "ArrowDown"){ e.preventDefault(); faster(-1); }
+  else if (k === "+" || k === "="){ e.preventDefault(); bigger(4); }
+  else if (k === "-" || k === "_"){ e.preventDefault(); bigger(-4); }
+  else if (k === "PageDown" || k === "ArrowLeft"){ e.preventDefault(); goTo(current+1); }
+  else if (k === "PageUp" || k === "ArrowRight"){ e.preventDefault(); goTo(current-1); }
+  else if (k === "Home"){ e.preventDefault(); goTo(0); }
+  else if (k.toLowerCase() === "m" || k === "צ"){ mirror = !mirror; $("viewport").classList.toggle("mirror", mirror); }
+  else if (k.toLowerCase() === "f" || k === "כ"){ toggleFull(); }
+  else if (k.toLowerCase() === "i" || k === "ן"){ toggleIndex(); }
+  else if (k === "Escape"){ $("index").hidden = true; }
+});
+const click = (id, fn) => $(id).addEventListener("click", e => { fn(); e.currentTarget.blur(); });
+click("bPlay", () => setPlaying(!playing));
+click("bFast", () => faster(1)); click("bSlow", () => faster(-1));
+click("bBigger", () => bigger(4)); click("bSmaller", () => bigger(-4));
+click("bNext", () => goTo(current+1)); click("bPrev", () => goTo(current-1));
+click("bMirror", () => { mirror = !mirror; $("viewport").classList.toggle("mirror", mirror); });
+click("bFull", toggleFull); click("bIndex", toggleIndex);
+$("index").addEventListener("click", e => { const b = e.target.closest("button"); if (b){ goTo(+b.dataset.i); $("index").hidden = true; } });
+$("text").addEventListener("dblclick", () => setPlaying(!playing));
+
+// keep screen awake while presenting (optional)
+let wake = null;
+async function keepAwake(){ try { wake = await navigator.wakeLock?.request("screen"); } catch(e){} }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") keepAwake(); });
+keepAwake();
+
+applyFs(); detect(); requestAnimationFrame(tick);
+</script>
