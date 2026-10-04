@@ -428,7 +428,11 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
   // ---------- Send answers to Claude (shared store Claude can read) ----------
   var btnSend = document.getElementById('btnSend');
   var dbP = (window.claude && window.claude.use) ? window.claude.use('db') : Promise.resolve(null);
-  dbP.then(function (db) { if (db) btnSend.hidden = false; });
+  // Only the form's owner sees the send button; everyone else fills and downloads their own PDF.
+  var isOwnerP = ((window.claude && window.claude.use) ? window.claude.use('user') : Promise.resolve(null))
+    .then(function (u) { return !!(u && u.isOwner && u.isOwner()); }).catch(function () { return false; });
+  var canSendP = Promise.all([dbP, isOwnerP]).then(function (v) { return !!v[0] && v[1]; });
+  canSendP.then(function (ok) { btnSend.hidden = !ok; });
   btnSend.addEventListener('click', async function () {
     var db = await dbP; if (!db) return;
     btnSend.disabled = true; say('שולח...');
@@ -441,7 +445,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
 
   // ---------- Clear with inline confirm ----------
   var bClear = document.getElementById('btnClear'), bYes = document.getElementById('btnClearYes'), bNo = document.getElementById('btnClearNo');
-  function confirmMode(on) { bClear.hidden = on; if (on) btnSend.hidden = true; else dbP.then(function (db) { btnSend.hidden = !db; }); bYes.hidden = !on; bNo.hidden = !on; btnPdf.hidden = on; say(on ? 'למחוק את כל התשובות?' : ''); }
+  function confirmMode(on) { bClear.hidden = on; if (on) btnSend.hidden = true; else canSendP.then(function (ok) { btnSend.hidden = !ok; }); bYes.hidden = !on; bNo.hidden = !on; btnPdf.hidden = on; say(on ? 'למחוק את כל התשובות?' : ''); }
   bClear.addEventListener('click', function () { confirmMode(true); });
   bNo.addEventListener('click', function () { confirmMode(false); });
   bYes.addEventListener('click', function () {
