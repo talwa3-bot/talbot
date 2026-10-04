@@ -185,6 +185,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
 
 <div class="bar">
   <button type="button" class="btn primary" id="btnPdf">הורדת המסמך כ־PDF</button>
+  <button type="button" class="btn" id="btnSend" hidden>שליחה לקלוד</button>
   <button type="button" class="btn" id="btnClear">ניקוי הטופס</button>
   <button type="button" class="btn danger" id="btnClearYes" hidden>כן, למחוק הכול</button>
   <button type="button" class="btn" id="btnClearNo" hidden>ביטול</button>
@@ -424,9 +425,23 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
     } finally { btnPdf.disabled = false; }
   });
 
+  // ---------- Send answers to Claude (shared store Claude can read) ----------
+  var btnSend = document.getElementById('btnSend');
+  var dbP = (window.claude && window.claude.use) ? window.claude.use('db') : Promise.resolve(null);
+  dbP.then(function (db) { if (db) btnSend.hidden = false; });
+  btnSend.addEventListener('click', async function () {
+    var db = await dbP; if (!db) return;
+    btnSend.disabled = true; say('שולח...');
+    try {
+      await db.doc('responses/current').set({ answers: JSON.stringify(state), sentAt: new Date().toISOString() });
+      say('התשובות נשלחו לקלוד.');
+    } catch (e) { say('השליחה נכשלה. נסו שוב.'); }
+    finally { btnSend.disabled = false; }
+  });
+
   // ---------- Clear with inline confirm ----------
   var bClear = document.getElementById('btnClear'), bYes = document.getElementById('btnClearYes'), bNo = document.getElementById('btnClearNo');
-  function confirmMode(on) { bClear.hidden = on; bYes.hidden = !on; bNo.hidden = !on; btnPdf.hidden = on; say(on ? 'למחוק את כל התשובות?' : ''); }
+  function confirmMode(on) { bClear.hidden = on; if (on) btnSend.hidden = true; else dbP.then(function (db) { btnSend.hidden = !db; }); bYes.hidden = !on; bNo.hidden = !on; btnPdf.hidden = on; say(on ? 'למחוק את כל התשובות?' : ''); }
   bClear.addEventListener('click', function () { confirmMode(true); });
   bNo.addEventListener('click', function () { confirmMode(false); });
   bYes.addEventListener('click', function () {
