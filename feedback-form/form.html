@@ -127,10 +127,15 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
 .sheet .ln.short-b .rule { margin-right: 10px; margin-left: 260px; }
 .sheet .ln.short-c .rule { margin-left: 0; margin-right: 260px; }
 
+.shot { position: fixed; inset: 0; z-index: 10; background: rgba(10, 14, 25, .6); display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; padding: calc(16px + env(safe-area-inset-top, 0px)) 16px 16px; }
+.shot-box { background: var(--surface); color: var(--fg); border-radius: 10px; padding: 16px; width: 100%; max-width: 820px; display: flex; flex-direction: column; gap: 10px; }
+.shot-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.shot-box p { margin: 0; color: var(--muted); }
+.shot-box img { width: 100%; height: auto; border: 1px solid var(--line); background: #fff; -webkit-touch-callout: default; user-select: auto; }
 @media print {
   @page { size: A4; margin: 0; }
   body { background: #fff; }
-  .app > header, .form, .bar, .preview .cap { display: none !important; }
+  .app > header, .form, .bar, .preview .cap, .shot { display: none !important; }
   .app { padding: 0; }
   .grid { display: block; }
   .stage { box-shadow: none; border-radius: 0; height: auto !important; }
@@ -185,11 +190,23 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
 
 <div class="bar">
   <button type="button" class="btn primary" id="btnPdf">הורדת המסמך כ־PDF</button>
+  <button type="button" class="btn" id="btnPrint" hidden>הדפסה</button>
   <button type="button" class="btn" id="btnSend" hidden>שליחה לקלוד</button>
   <button type="button" class="btn" id="btnClear">ניקוי הטופס</button>
   <button type="button" class="btn danger" id="btnClearYes" hidden>כן, למחוק הכול</button>
   <button type="button" class="btn" id="btnClearNo" hidden>ביטול</button>
   <span class="status" id="status" role="status"></span>
+</div>
+
+<div class="shot" id="shot" hidden>
+  <div class="shot-box">
+    <div class="shot-head">
+      <strong>המסמך שלך מוכן</strong>
+      <button type="button" class="btn" id="shotClose">סגירה</button>
+    </div>
+    <p>בטלפון: לחיצה ארוכה על התמונה ואז "שמירת תמונה". במחשב: קליק ימני ואז "שמירת תמונה בשם". מהתמונה השמורה אפשר להדפיס או לשלוח.</p>
+    <img id="shotImg" alt="המסמך המלא עם התשובות">
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -399,6 +416,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
       var w = 210, h = canvas.height * 210 / canvas.width, x = 0;
       if (h > 297) { w = 297 * canvas.width / canvas.height; h = 297; x = (210 - w) / 2; } // long answers: shrink to one page
       pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', x, 0, w, h);
+      pdf._canvas = canvas;
       return pdf;
     } finally { host.remove(); }
   }
@@ -406,6 +424,18 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
     var c = (state.cemetery || '').replace(/[\\/:*?"<>|]+/g, ' ').trim();
     return 'משוב מפקד הטקס' + (c ? ' - ' + c : '') + ' - יום הזיכרון 2026.pdf';
   }
+
+  var inViewer = !!(window.claude && window.claude.use);
+  var shot = document.getElementById('shot'), shotImg = document.getElementById('shotImg');
+  function showImage(canvas) {
+    shotImg.src = canvas.toDataURL('image/png');
+    shot.hidden = false; say('');
+  }
+  document.getElementById('shotClose').addEventListener('click', function () { shot.hidden = true; });
+  // Outside Claude (the file opened directly in a browser) printing works normally.
+  var btnPrint = document.getElementById('btnPrint');
+  btnPrint.hidden = inViewer;
+  btnPrint.addEventListener('click', function () { window.print(); });
 
   btnPdf.addEventListener('click', async function () {
     btnPdf.disabled = true; say('מכין את המסמך...');
@@ -417,9 +447,10 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
         catch (err) {
           if (err && err.code === 'declined') say('השמירה בוטלה.');
           else if (err && err.code === 'rate_limited') say('חלון שמירה כבר פתוח. נסו שוב בעוד רגע.');
-          else say('לא ניתן לשמור קובץ בתצוגה הזו.');
+          else showImage(pdf._canvas);
         }
-      } else { pdf.save(fileName()); say('המסמך הורד.'); }
+      } else if (inViewer) { showImage(pdf._canvas); }
+      else { pdf.save(fileName()); say('המסמך הורד.'); }
     } catch (e) {
       say('יצירת ה־PDF נכשלה. בדקו חיבור לאינטרנט ונסו שוב.');
     } finally { btnPdf.disabled = false; }
