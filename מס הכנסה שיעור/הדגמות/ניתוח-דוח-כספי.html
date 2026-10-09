@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>דוח כספי בעיני מפקח</title>
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+  :root{--ink:#14181f;--muted:#6b7280;--accent:#0f5e6b;--line:#e6e8eb;--soft:#f3f6f7;--bg:#fff;--ease:cubic-bezier(.2,.8,.2,1);
+    --font:"Assistant","Segoe UI","Arial Hebrew",Arial,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);color:var(--ink);background:var(--bg);font-size:17px;line-height:1.5}
+  .wrap{max-width:1240px;margin:0 auto;padding:36px 28px 80px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:2px solid var(--ink);padding-bottom:18px}
+  .kicker{color:var(--accent);font-weight:700;font-size:15px}
+  h1{font-size:34px;font-weight:800;line-height:1.2;margin-top:4px}
+  .sub{color:var(--muted);margin-top:6px}
+  .badge{border:1.5px solid var(--muted);color:var(--muted);font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
+  h2{font-size:24px;font-weight:800;margin:40px 0 6px}
+  .h2sub{color:var(--muted);margin-bottom:14px}
+  button{font:inherit;cursor:pointer;border:1.5px solid var(--ink);background:#fff;color:var(--ink);padding:8px 16px;font-weight:700;
+    transition:transform 140ms var(--ease),background 140ms var(--ease)}
+  button:active{transform:scale(.97)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-size:18px;padding:12px 30px}
+  button.primary:hover{background:#0c4d58}
+  button:disabled{opacity:.5;cursor:default}
+  .actions{display:flex;gap:12px;align-items:center;margin:26px 0 8px}
+  .status{color:var(--muted);font-size:15px}
+  .bar{height:3px;background:var(--line);overflow:hidden;margin-top:10px}
+  .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width 120ms linear}
+
+  .grid2{display:grid;grid-template-columns:1.1fr 1fr;gap:36px;align-items:start}
+  table{width:100%;border-collapse:collapse;font-size:15.5px}
+  th{text-align:right;color:var(--muted);font-size:13px;font-weight:700;padding:8px 10px;border-bottom:1.5px solid var(--ink)}
+  th.n,td.n{text-align:left;direction:ltr;font-variant-numeric:tabular-nums}
+  td{padding:7px 10px;border-bottom:1px solid var(--line)}
+  tr.sum td{font-weight:800;border-top:1.5px solid var(--ink)}
+  tr.sec td{font-weight:800;color:var(--accent);padding-top:16px;border-bottom:none}
+  tr.hl td{background:var(--soft)}
+
+  .chart{border:1px solid var(--line);padding:16px 18px}
+  .chart h3{font-size:17px;font-weight:800}
+  .chart p{color:var(--muted);font-size:14px}
+  .legend{display:flex;gap:18px;font-size:14px;color:var(--muted);margin-top:8px}
+  .legend i{display:inline-block;width:14px;height:10px;margin-left:6px;vertical-align:middle}
+
+  .finding{border:1px solid var(--line);border-right:4px solid var(--accent);margin-top:14px;padding:16px 20px;opacity:0;transform:translateY(6px);animation:in 240ms var(--ease) forwards}
+  @keyframes in{to{opacity:1;transform:none}}
+  .finding h3{font-size:20px;font-weight:800;line-height:1.35}
+  .finding .why{color:#343a44;margin-top:6px}
+  .finding .metric{display:flex;gap:28px;margin-top:10px;flex-wrap:wrap}
+  .finding .metric div{font-size:14px;color:var(--muted)}
+  .finding .metric b{display:block;font-size:20px;color:var(--ink);direction:ltr;text-align:right;font-variant-numeric:tabular-nums}
+  .reveal{margin-top:12px;font-size:14px;padding:6px 14px;border-width:1px}
+  .q{background:var(--soft);padding:12px 16px;margin-top:12px;display:none}
+  .q.on{display:block;animation:in 200ms var(--ease) forwards}
+  .q b{color:var(--accent);font-size:14px;display:block;margin-bottom:4px}
+  .q li{margin-right:18px}
+  .hidden{display:none}
+  details{margin-top:36px;border-top:2px solid var(--ink);padding-top:14px}
+  summary{cursor:pointer;font-weight:800;font-size:20px}
+  pre{white-space:pre-wrap;background:var(--soft);padding:18px;margin-top:12px;font-family:var(--font);font-size:15px;line-height:1.6}
+  .note{margin-top:30px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);padding-top:12px}
+  @media (max-width:860px){.grid2{grid-template-columns:1fr}h1{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="kicker">רובוט להדגמה · ניתוח דוחות כספיים</div>
+      <h1>דוח כספי בעיני מפקח: נחשון יבוא ושיווק בע״מ</h1>
+      <div class="sub">שלוש שנות דוחות, ניתוח יחסים והתגלגלות, ושאלות לדיון לפי סדר חשיבות. אלפי ₪.</div>
+    </div>
+    <span class="badge">חברה ונתונים בדויים</span>
+  </header>
+
+  <div class="grid2" style="margin-top:26px">
+    <div>
+      <table id="fs"></table>
+    </div>
+    <div class="chart">
+      <h3>המכירות עולות, הרווח הגולמי יורד</h3>
+      <p>מחזור מכירות במיליוני ₪ (עמודות) מול שיעור רווח גולמי (קו)</p>
+      <svg id="chart" viewBox="0 0 520 300" width="100%" role="img" aria-label="מחזור מכירות ושיעור רווח גולמי לפי שנים"></svg>
+      <div class="legend"><span><i style="background:var(--accent)"></i>מחזור מכירות</span><span><i style="background:var(--ink);height:3px"></i>שיעור רווח גולמי</span></div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="run">נתח בעיני מפקח</button>
+    <span class="status" id="status">הדוחות נטענו. לחצו כדי להריץ את הניתוח.</span>
+  </div>
+  <div class="bar"><i id="prog"></i></div>
+
+  <section id="out" class="hidden">
+    <h2>יחסים מרכזיים</h2>
+    <table id="ratios"></table>
+    <h2>ממצאים לפי סדר חשיבות</h2>
+    <p class="h2sub">לפני שחושפים את השאלות המוצעות: מה הייתם שואלים את המייצג?</p>
+    <div id="findings"></div>
+  </section>
+
+  <details>
+    <summary>ההוראות שמאחורי הרובוט (מיומנות)</summary>
+    <pre>תפקיד: את/ה מפקח/ת מס מנוסה הקורא/ת דוחות כספיים של חברה פרטית לקראת דיון.
+קלט: דוחות כספיים מבוקרים לשלוש שנים, כולל ביאורים.
+שלבים:
+1. בנה/י טבלת רווח והפסד ומאזן מקוצרים לשלוש השנים.
+2. חשב/י: שיעור רווח גולמי, שיעור רווח תפעולי, ימי לקוחות, ימי מלאי, יחס הוצאות רכב למחזור, הוצאות מימון מול אשראי.
+3. זהה/י התגלגלות: לאן הלך הכסף? השווה/י את הגידול במכירות לגידול ברווח, במזומן, בלקוחות, במלאי ובאשראי.
+4. סמן/י עסקאות עם צדדים קשורים, יתרות בעלי מניות ושינויים חריגים בסעיפי הוצאה.
+5. לכל ממצא: כותרת בצורת מסקנה, המספרים התומכים, הפניה לביאור, ו־2 עד 3 שאלות לדיון.
+כללים: אל תקבע/י חבות. הפרד/י בין עובדה (מספר בדוח) לבין השערה (הסבר אפשרי). כל מספר מפנה לשורה בדוח.</pre>
+  </details>
+  <p class="note">הדגמה לצורכי הדרכה. החברה והנתונים בדויים. הממצאים הם נקודות לבדיקה ואינם קובעים חבות במס.</p>
+</div>
+
+<script>
+(function(){
+  const Y=['2023','2024','2025'];
+  const d={
+    rev:[18400,21900,25600], cogs:[12700,15770,19300],
+    sal:[2300,2450,2520], rent:[900,950,980], car:[310,420,610], mgmt:[0,600,1200], ga:[720,760,800], fin:[140,160,310],
+    cash:[1250,640,210], ar:[3100,4320,6450], inv:[2900,3700,5250], sh:[180,620,1140],
+    bank:[900,1600,3400], ap:[2400,2950,3300], eq:[4100,4708,4588]
+  };
+  const gp=d.rev.map((r,i)=>r-d.cogs[i]);
+  const op=gp.map((g,i)=>g-d.sal[i]-d.rent[i]-d.car[i]-d.mgmt[i]-d.ga[i]);
+  const pbt=op.map((o,i)=>o-d.fin[i]);
+  const f=n=>(n<0?'(':'')+Math.abs(n).toLocaleString('he-IL')+(n<0?')':'');
+  const pct=x=>(x*100).toFixed(1)+'%';
+
+  const fsRows=[
+    ['sec','רווח והפסד'],
+    ['','הכנסות ממכירות',d.rev],['','עלות המכר',d.cogs.map(x=>-x)],['sum','רווח גולמי',gp],
+    ['','שכר עבודה',d.sal.map(x=>-x)],['','שכירות ואחזקה',d.rent.map(x=>-x)],['hl','הוצאות רכב',d.car.map(x=>-x)],
+    ['hl','דמי ניהול לחברה קשורה (ביאור 12)',d.mgmt.map(x=>-x)],['','הנהלה וכלליות אחרות',d.ga.map(x=>-x)],
+    ['sum','רווח תפעולי',op],['','הוצאות מימון',d.fin.map(x=>-x)],['sum','רווח (הפסד) לפני מס',pbt],
+    ['sec','מאזן (נבחר)'],
+    ['','מזומנים',d.cash],['','לקוחות',d.ar],['','מלאי',d.inv],['hl','חו״ז בעל מניות, יתרת חובה (ביאור 8)',d.sh],
+    ['','אשראי בנקאי',d.bank],['','ספקים',d.ap],['','הון עצמי',d.eq]
+  ];
+  document.getElementById('fs').innerHTML='<thead><tr><th>סעיף</th>'+Y.map(y=>`<th class="n">${y}</th>`).join('')+'</tr></thead><tbody>'+
+    fsRows.map(r=>r[0]==='sec'?`<tr class="sec"><td colspan="4">${r[1]}</td></tr>`:`<tr class="${r[0]}"><td>${r[1]}</td>${r[2].map(v=>`<td class="n">${f(v)}</td>`).join('')}</tr>`).join('')+'</tbody>';
+
+  // chart
+  (function(){
+    const svg=document.getElementById('chart'); const W=520,H=300,pl=50,pr=50,pt=20,pb=40;
+    const maxR=30000, gm=gp.map((g,i)=>g/d.rev[i]); const gmin=.20,gmax=.34;
+    const bw=70, xs=Y.map((_,i)=>pl+ (W-pl-pr)/3*(i+.5));
+    let s='';
+    [0,10000,20000,30000].forEach(v=>{const y=H-pb-(v/maxR)*(H-pt-pb); s+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="#e6e8eb"/><text x="${W-pr+6}" y="${y+4}" font-size="11" fill="#6b7280" text-anchor="start">${v/1000}</text>`;});
+    // left axis: GM%
+    [.20,.25,.30].forEach(v=>{const y=H-pb-((v-gmin)/(gmax-gmin))*(H-pt-pb); s+=`<text x="${pl-6}" y="${y+4}" font-size="11" fill="#6b7280" text-anchor="end">${Math.round(v*100)}%</text>`;});
+    xs.forEach((x,i)=>{const h=(d.rev[i]/maxR)*(H-pt-pb); s+=`<rect x="${x-bw/2}" y="${H-pb-h}" width="${bw}" height="${h}" fill="#0f5e6b" rx="2"/>
+      <text x="${x}" y="${H-pb-h-6}" font-size="12" text-anchor="middle" fill="#14181f" font-weight="700">${(d.rev[i]/1000).toFixed(1)}</text>
+      <text x="${x}" y="${H-pb+18}" font-size="13" text-anchor="middle" fill="#6b7280">${Y[i]}</text>`;});
+    const pts=xs.map((x,i)=>[x,H-pb-((gm[i]-gmin)/(gmax-gmin))*(H-pt-pb)]);
+    s+=`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#14181f" stroke-width="3"/>`;
+    pts.forEach((p,i)=>{s+=`<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="#fff" stroke="#14181f" stroke-width="2.5"/><text x="${p[0]}" y="${p[1]-14}" font-size="13" fill="#14181f" font-weight="800" text-anchor="middle" stroke="#fff" stroke-width="5" paint-order="stroke">${pct(gm[i])}</text>`;});
+    svg.innerHTML=s;
+  })();
+
+  // ratios
+  const R={
+    gm:gp.map((g,i)=>g/d.rev[i]), om:op.map((o,i)=>o/d.rev[i]),
+    dso:d.ar.map((a,i)=>a/d.rev[i]*365), dio:d.inv.map((v,i)=>v/d.cogs[i]*365),
+    carr:d.car.map((c,i)=>c/d.rev[i]), finr:d.fin.map((x,i)=>x/d.bank[i])
+  };
+  const growth=(a)=>a[2]/a[0]-1;
+
+  const findings=[
+    {title:`המכירות עלו ב־${Math.round(growth(d.rev)*100)}% בשנתיים, אבל שיעור הרווח הגולמי ירד מ־${pct(R.gm[0])} ל־${pct(R.gm[2])}`,
+     why:'ירידה מתמשכת ברווחיות הגולמית בזמן צמיחה במכירות אינה מתיישבת עם יתרונות לגודל. ההסברים האפשריים כוללים שינוי בתמהיל, לחץ מחירים, הכנסות שלא דווחו במלואן או עלות מכר מנופחת.',
+     m:[['רווח גולמי 2023',pct(R.gm[0])],['רווח גולמי 2025',pct(R.gm[2])],['פער לפי שיעור 2023 (אלפי ₪)',f(Math.round(d.rev[2]*R.gm[0]-gp[2]))]],
+     q:['מה השתנה בתמהיל המוצרים או בספקים בשנתיים האחרונות?','האם המחירון ללקוחות השתנה, ומה מתועד לגבי הנחות?','איך נספר והוערך המלאי לסוף כל שנה?']},
+    {title:`דמי ניהול לחברה קשורה קפצו מאפס ל־${f(d.mgmt[2])} אלפי ₪, ומחקו כמעט את כל הרווח התפעולי`,
+     why:'הוצאה חדשה לצד קשור, שגדלה פי שניים בשנה, היא נקודת בדיקה מרכזית. השאלה היא אם ניתן שירות בפועל, ואם המחיר משקף מחיר שוק.',
+     m:[['דמי ניהול 2025',f(d.mgmt[2])],['רווח תפעולי 2025',f(op[2])],['רווח תפעולי 2023',f(op[0])]],
+     q:['איזה שירות קיבלה החברה בפועל, ומה התיעוד לכך?','מי בעלי המניות בחברה המקבלת, ואיך דיווחה על ההכנסה?','איך נקבע הסכום, והאם יש הסכם בכתב?']},
+    {title:`יתרת החובה של בעל המניות גדלה פי ${Math.round(d.sh[2]/d.sh[0])}, בזמן שהחברה הגדילה את האשראי הבנקאי פי ${(d.bank[2]/d.bank[0]).toFixed(1)}`,
+     why:'החברה לווה מהבנק ומשלמת ריבית, ובמקביל מממנת את בעל המניות. יש לבחון ריבית רעיונית ומשיכות שלא הוחזרו, וכן ייחוס של הוצאות המימון.',
+     m:[['יתרת בעל מניות 2023',f(d.sh[0])],['יתרת בעל מניות 2025',f(d.sh[2])],['הוצאות מימון 2025',f(d.fin[2])]],
+     q:['מה מהות המשיכות, ומתי יוחזרו?','האם נרשמה ריבית על היתרה, ובאיזה שיעור?','האם הוצאות המימון קשורות לכספים שהועברו לבעל המניות?']},
+    {title:`ימי הלקוחות עלו מ־${Math.round(R.dso[0])} ל־${Math.round(R.dso[2])}: החברה מוכרת יותר וגובה לאט יותר`,
+     why:'עלייה חדה בימי האשראי ללקוחות יכולה להעיד על קושי בגבייה, על לקוחות קשורים או על הכרה מוקדמת בהכנסה.',
+     m:[['ימי לקוחות 2023',Math.round(R.dso[0])],['ימי לקוחות 2025',Math.round(R.dso[2])],['יתרת לקוחות 2025',f(d.ar[2])]],
+     q:['מי עשרת הלקוחות הגדולים, והאם מי מהם צד קשור?','האם נרשמה הפרשה לחובות מסופקים, ועל סמך מה?']},
+    {title:`ימי המלאי עלו מ־${Math.round(R.dio[0])} ל־${Math.round(R.dio[2])}`,
+     why:'גידול במלאי מעבר לגידול בעלות המכר מצריך הבנה של מדיניות הרכש ושל הערכת המלאי.',
+     m:[['ימי מלאי 2023',Math.round(R.dio[0])],['ימי מלאי 2025',Math.round(R.dio[2])],['מלאי 2025',f(d.inv[2])]],
+     q:['האם בוצעה ספירת מלאי בנוכחות רואה החשבון המבקר?','האם יש מלאי איטי או מלאי שאינו שמיש?']},
+    {title:`הוצאות הרכב עלו מ־${pct(R.carr[0])} ל־${pct(R.carr[2])} מהמחזור`,
+     why:'גידול חד בהוצאות רכב, שאינו נובע מגידול בצי או בעובדים, מחייב בדיקה של השימוש הפרטי ושל זקיפת שווי השימוש.',
+     m:[['הוצאות רכב 2023',f(d.car[0])],['הוצאות רכב 2025',f(d.car[2])],['גידול',Math.round((d.car[2]/d.car[0]-1)*100)+'%']],
+     q:['כמה רכבים יש לחברה, ומי משתמש בהם?','האם נזקף שווי שימוש לכל המשתמשים?']}
+  ];
+
+  const run=document.getElementById('run'), st=document.getElementById('status'), pr=document.getElementById('prog');
+  run.onclick=()=>{
+    run.disabled=true; let k=0; const steps=['קורא רווח והפסד','קורא מאזן וביאורים','מחשב יחסים','מזהה התגלגלות','מדרג ממצאים','מנסח שאלות לדיון'];
+    const t=setInterval(()=>{k++; pr.style.width=(k/steps.length*100)+'%'; st.textContent=(steps[k-1]||steps[steps.length-1])+'…'; if(k>=steps.length){clearInterval(t); setTimeout(show,180);}},260);
+  };
+  function show(){
+    const rr=[['שיעור רווח גולמי',R.gm,pct],['שיעור רווח תפעולי',R.om,pct],['ימי לקוחות',R.dso,x=>Math.round(x)],['ימי מלאי',R.dio,x=>Math.round(x)],['הוצאות רכב מהמחזור',R.carr,pct],['הוצאות מימון מהאשראי הבנקאי',R.finr,pct]];
+    document.getElementById('ratios').innerHTML='<thead><tr><th>יחס</th>'+Y.map(y=>`<th class="n">${y}</th>`).join('')+'<th class="n">מגמה</th></tr></thead><tbody>'+
+      rr.map(r=>`<tr><td>${r[0]}</td>${r[1].map(v=>`<td class="n">${r[2](v)}</td>`).join('')}<td class="n">${r[1][2]>r[1][0]?'▲':'▼'}</td></tr>`).join('')+'</tbody>';
+    const box=document.getElementById('findings'); box.innerHTML='';
+    findings.forEach((x,i)=>{
+      const el=document.createElement('div'); el.className='finding'; el.style.animationDelay=(i*70)+'ms';
+      el.innerHTML=`<h3>${i+1}. ${x.title}</h3><p class="why">${x.why}</p>
+        <div class="metric">${x.m.map(m=>`<div>${m[0]}<b>${m[1]}</b></div>`).join('')}</div>
+        <button class="reveal">הצג שאלות מוצעות לדיון</button>
+        <div class="q"><b>שאלות מוצעות לדיון</b><ul>${x.q.map(z=>`<li>${z}</li>`).join('')}</ul></div>`;
+      el.querySelector('.reveal').onclick=e=>{el.querySelector('.q').classList.add('on'); e.target.remove();};
+      box.appendChild(el);
+    });
+    document.getElementById('out').classList.remove('hidden');
+    st.textContent=`הניתוח הסתיים: ${findings.length} ממצאים לפי סדר חשיבות.`;
+    document.getElementById('out').scrollIntoView({behavior:'smooth'});
+  }
+})();
+</script>
+</body>
+</html>

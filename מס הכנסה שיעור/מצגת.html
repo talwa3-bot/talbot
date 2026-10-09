@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>בינה מלאכותית בצד השני של השולחן</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  :root{
+    --ink:#14181f;
+    --muted:#6b7280;
+    --accent:#0f5e6b;
+    --line:#e6e8eb;
+    --soft:#f5f7f8;
+    --bg:#ffffff;
+    --ease:cubic-bezier(.2,.8,.2,1);
+    --font:"Assistant","Segoe UI","Arial Hebrew",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#d9dde1;font-family:var(--font);color:var(--ink);overflow:hidden}
+  body.notes-on .stage{height:calc(100% - 220px)}
+
+  .stage{position:fixed;inset:0;display:grid;place-items:center}
+  .deck{position:relative;width:1600px;height:900px;transform-origin:center center}
+  .slide{position:absolute;inset:0;background:var(--bg);padding:84px 110px 90px;display:flex;flex-direction:column;
+    opacity:0;visibility:hidden;transform:translateX(-24px);transition:opacity 260ms var(--ease),transform 260ms var(--ease),visibility 0s 260ms;
+    box-shadow:0 10px 40px rgba(20,24,31,.12)}
+  .slide.active{opacity:1;visibility:visible;transform:none;transition:opacity 260ms var(--ease),transform 260ms var(--ease)}
+  .slide.back{transform:translateX(24px)}
+
+  /* chrome on every slide */
+  .slide::after{content:attr(data-num);position:absolute;bottom:38px;left:110px;font-size:20px;color:var(--muted);font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+  .foot{position:absolute;bottom:38px;right:110px;font-size:20px;color:var(--muted)}
+
+  .kicker{font-size:24px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:22px}
+  h1{font-size:54px;line-height:1.18;font-weight:800;max-width:1300px;letter-spacing:-.005em;text-wrap:balance}
+  h2{font-size:30px;font-weight:700;margin-bottom:14px}
+  p,li{font-size:30px;line-height:1.5}
+  .lead{font-size:32px;line-height:1.5;color:#343a44;max-width:1250px;margin-top:26px}
+  .muted{color:var(--muted)}
+  .acc{color:var(--accent)}
+  .body{flex:1;display:flex;flex-direction:column;justify-content:center;margin-top:30px}
+  .rule{height:4px;width:96px;background:var(--accent);margin:30px 0}
+
+  /* title slide */
+  .title-slide{justify-content:center}
+  .title-slide h1{font-size:84px;max-width:1300px}
+  .title-slide .lead{font-size:34px}
+  .title-slide .meta{margin-top:60px;font-size:26px;color:var(--muted);display:flex;gap:40px}
+
+  /* divider */
+  .divider{background:var(--accent);color:#fff;justify-content:center}
+  .divider .kicker{color:rgba(255,255,255,.75)}
+  .divider h1{font-size:76px}
+  .divider .lead{color:rgba(255,255,255,.9)}
+  .divider::after,.divider .foot{color:rgba(255,255,255,.6)}
+
+  /* statement */
+  .statement h1{font-size:68px;max-width:1250px}
+
+  /* lists */
+  ul.clean{list-style:none;display:grid;gap:22px}
+  ul.clean li{padding-right:34px;position:relative}
+  ul.clean li::before{content:"";position:absolute;right:0;top:19px;width:14px;height:4px;background:var(--accent)}
+  ol.num{list-style:none;counter-reset:n;display:grid;gap:24px}
+  ol.num li{counter-increment:n;padding-right:70px;position:relative}
+  ol.num li::before{content:counter(n);position:absolute;right:0;top:-2px;width:48px;height:48px;border:2px solid var(--accent);color:var(--accent);
+    border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:24px}
+  ol.num b,ul.clean b{font-weight:700}
+
+  /* grid columns */
+  .cols{display:grid;gap:56px;align-items:start}
+  .c2{grid-template-columns:1fr 1fr}
+  .c3{grid-template-columns:repeat(3,1fr)}
+  .col h2{padding-bottom:12px;border-bottom:2px solid var(--line);margin-bottom:18px}
+
+  /* table */
+  table.t{width:100%;border-collapse:collapse;font-size:26px}
+  table.t th{text-align:right;font-weight:700;color:var(--muted);font-size:22px;padding:12px 18px;border-bottom:2px solid var(--ink)}
+  table.t td{padding:16px 18px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.4}
+  table.t td:first-child{font-weight:700}
+  table.t .hl{color:var(--accent);font-weight:700}
+
+  /* flow (process) */
+  .flow{display:flex;align-items:stretch;gap:0;margin-top:10px}
+  .step{flex:1;border:2px solid var(--ink);padding:22px 18px;text-align:center;font-size:25px;font-weight:700;line-height:1.3;display:grid;place-items:center;min-height:120px;background:#fff}
+  .step.human{border-color:var(--accent);color:var(--accent);background:var(--soft)}
+  .arrow{width:56px;display:grid;place-items:center;color:var(--muted);font-size:34px}
+  .flow-cap{display:flex;gap:0;margin-top:10px}
+  .flow-cap span{flex:1;text-align:center;font-size:20px;color:var(--muted)}
+  .flow-cap i{width:56px}
+
+  /* callout */
+  .callout{margin-top:44px;border-right:6px solid var(--accent);background:var(--soft);padding:24px 30px;font-size:28px;line-height:1.45}
+  .callout b{color:var(--accent)}
+
+  /* equation */
+  .eq{display:flex;align-items:center;gap:36px;font-size:64px;font-weight:800;margin:30px 0 10px}
+  .eq .box{border:3px solid var(--ink);padding:18px 40px}
+  .eq .box.acc{border-color:var(--accent);color:var(--accent)}
+  .eq .op{color:var(--muted);font-weight:400}
+
+  /* tiers */
+  .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:10px;align-items:end}
+  .tier{border:2px solid var(--ink);border-left:none;padding:28px 26px;background:#fff}
+  .tier:last-child{border-left:2px solid var(--ink)}
+  .tier .lv{font-size:20px;color:var(--muted);font-weight:700}
+  .tier h2{font-size:34px;margin:6px 0 10px}
+  .tier p{font-size:24px;line-height:1.45}
+  .tier.t1{min-height:250px}.tier.t2{min-height:320px}.tier.t3{min-height:390px;border-color:var(--accent);background:var(--soft)}
+  .tier.t3 h2{color:var(--accent)}
+
+  /* mock output */
+  .mock{border:2px solid var(--ink);background:#fff}
+  .mock .bar{display:flex;justify-content:space-between;padding:12px 20px;border-bottom:2px solid var(--ink);font-size:20px;font-weight:700}
+  .mock table.t{font-size:23px}
+  .mock table.t td,.mock table.t th{padding:12px 20px}
+  .tag{display:inline-block;font-size:19px;font-weight:700;padding:2px 12px;border:2px solid var(--accent);color:var(--accent);border-radius:999px}
+  .tag.ok{border-color:var(--line);color:var(--muted)}
+
+  /* demo button */
+  .demo{display:inline-flex;align-items:center;gap:14px;margin-top:40px;align-self:flex-start;background:var(--accent);color:#fff;text-decoration:none;
+    font-size:26px;font-weight:700;padding:18px 34px;transition:transform 160ms var(--ease),background 160ms var(--ease)}
+  .demo:hover{background:#0c4d58}
+  .demo:active{transform:scale(.97)}
+  .demo small{font-weight:400;opacity:.85;font-size:20px}
+
+  /* agenda */
+  .agenda{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:20px}
+  .agenda div{border-top:6px solid var(--line);padding:26px 0 0 40px}
+  .agenda div.on{border-top-color:var(--accent)}
+  .agenda .min{font-size:22px;color:var(--muted);font-weight:700}
+  .agenda h2{font-size:36px;margin:8px 0 12px}
+  .agenda p{font-size:24px;color:#343a44}
+
+  /* who */
+  .who{display:grid;grid-template-columns:1fr 1fr;gap:70px;margin-top:10px}
+  .who h2{font-size:34px}
+  .who .role{font-size:24px;color:var(--accent);font-weight:700;margin-bottom:16px}
+  .who li{font-size:25px}
+
+  .big-num{font-size:120px;font-weight:800;line-height:1;color:var(--accent)}
+
+  /* controls */
+  .hud{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;font-size:15px;color:#4b5563;z-index:5;
+    background:rgba(255,255,255,.92);padding:6px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.08);opacity:.25;transition:opacity 200ms var(--ease)}
+  .hud:hover{opacity:1}
+  .hud button{font:inherit;border:1px solid #cfd4da;background:#fff;padding:6px 12px;border-radius:999px;cursor:pointer}
+  .hud button:active{transform:scale(.97)}
+  .progress{position:fixed;top:0;right:0;height:4px;background:var(--accent);transition:width 220ms var(--ease);z-index:6}
+
+  .notes-panel{position:fixed;bottom:0;right:0;left:0;height:220px;background:#111827;color:#e5e7eb;padding:18px 28px 18px;overflow:auto;display:none;z-index:4;
+    font-size:19px;line-height:1.6;direction:rtl}
+  .notes-panel .t{color:#9ca3af;font-size:15px;margin-bottom:6px}
+  body.notes-on .notes-panel{display:block}
+  aside.notes{display:none}
+
+  @media print{
+    @page{size:1600px 900px;margin:0}
+    html,body{overflow:visible;background:#fff;height:auto}
+    .stage{position:static;display:block}
+    .deck{transform:none!important;width:1600px;height:auto}
+    .slide{position:relative;opacity:1;visibility:visible;transform:none;page-break-after:always;box-shadow:none;height:900px}
+    .hud,.progress,.notes-panel{display:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="stage" id="stage">
+<div class="deck" id="deck">
+
+<!-- 1 -->
+<section class="slide title-slide">
+  <div class="kicker">רשות המסים · מפגש העשרה למאמנים בראיית חשבון</div>
+  <h1>בינה מלאכותית בצד השני של השולחן</h1>
+  <p class="lead">מה משרדי רואי החשבון עושים היום עם בינה מלאכותית, ומה זה אומר על עבודת הביקורת והשומה</p>
+  <div class="meta"><span>טל ולנשטין, רו״ח</span><span>קהילת איי איי פיננס</span><span>90 דקות</span></div>
+  <aside class="notes">[0:00 · 2 דק׳] פתיחה. תודה על ההזמנה. המטרה של המפגש: לא ללמד אתכם עוד כלי, את זה אתם כבר מקבלים בהדרכות הפנימיות. המטרה היא להראות לכם מה קורה היום בצד השני של השולחן: במשרדים ובעסקים שהתיקים שלהם מגיעים אליכם.</aside>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <div class="kicker">מי אנחנו</div>
+  <h1>אנחנו רואי חשבון שעובדים עם בינה מלאכותית כל יום, לא חברת טכנולוגיה</h1>
+  <div class="body">
+    <div class="who">
+      <div>
+        <h2>טל ולנשטין, רו״ח</h2>
+        <div class="role">מנהלת במשרד רואי חשבון · מייסדת שותפה, איי איי פיננס</div>
+        <ul class="clean">
+          <li>ביקורת, מיסים והערכות שווי</li>
+          <li>רקע בייעוץ מס בפירמות הגדולות</li>
+          <li>מרצה לניתוח דוחות כספיים בעזרת בינה מלאכותית</li>
+        </ul>
+      </div>
+      <div>
+        <h2>קהילת איי איי פיננס</h2>
+        <div class="role">יותר מ־2,000 אנשי כספים בישראל</div>
+        <ul class="clean">
+          <li>רואי חשבון, חשבים, מנהלי כספים ויועצי מס</li>
+          <li>מלמדים ומיישמים בינה מלאכותית בעבודה המקצועית</li>
+          <li>רואים מקרוב מה המשרדים מאמצים ומה נכשל</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="foot">מי אנחנו</div>
+  <aside class="notes">[0:02 · 3 דק׳] להציג את עצמי ואת הקהילה. להדגיש: אנחנו מהשטח, יושבים באותם דיונים, מכינים את אותם דוחות. כל מה שתראו היום נבנה ונבדק על עבודה אמיתית, עם נתונים בדויים לצורך ההדגמה.</aside>
+</section>
+
+<!-- 3 -->
+<section class="slide statement">
+  <div class="kicker">נקודת המוצא</div>
+  <div class="body" style="margin-top:0">
+    <h1>חלק הולך וגדל ממה שמגיע אליכם לשולחן כבר עבר דרך בינה מלאכותית</h1>
+    <div class="rule"></div>
+    <div class="cols c3" style="max-width:1300px">
+      <div><h2>דוחות</h2><p class="muted">הנהלת חשבונות, התאמות וגיליונות עבודה</p></div>
+      <div><h2>תשובות</h2><p class="muted">מענה לדרישות מסמכים ולשאלות בדיון</p></div>
+      <div><h2>חוות דעת</h2><p class="muted">טיעונים משפטיים, ניתוחים והפניות לפסיקה</p></div>
+    </div>
+  </div>
+  <aside class="notes">[0:05 · 2 דק׳] לשאול את הקהל: מי נתקל לאחרונה במסמך שהרגיש לו "כתוב מדי"? לא לחכות לתשובה ארוכה. המסר: זה כבר כאן, והשאלה היא איך מזהים, מבינים ומבקרים.</aside>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <div class="kicker">מבנה המפגש</div>
+  <h1>שלושה חלקים: הכלים והכללים, מה קורה במשרדים, ומה זה אומר עבורכם</h1>
+  <div class="body">
+    <div class="agenda">
+      <div class="on"><div class="min">כ־15 דקות</div><h2>הכלים והכללים</h2><p>חינמי מול ארגוני, תיקון 13 ושלוש רמות שימוש</p></div>
+      <div><div class="min">כ־45 דקות</div><h2>מה קורה במשרדים</h2><p>הנהלת חשבונות, כרטסות, דוחות כספיים, דיוני שומה וחוות דעת, עם שלוש הדגמות</p></div>
+      <div><div class="min">כ־15 דקות</div><h2>מה זה אומר עבורכם</h2><p>איך מבקרים תוצר שנוצר בבינה מלאכותית</p></div>
+    </div>
+    <p class="muted" style="margin-top:50px">ושאלות לאורך כל הדרך. אין צורך במחשבים, הכול מוצג על המסך.</p>
+  </div>
+  <aside class="notes">[0:07 · 1 דק׳] לעבור מהר. להבהיר שאין סדנה מעשית ושמותר לעצור ולשאול בכל רגע.</aside>
+</section>
+
+<!-- 5 divider -->
+<section class="slide divider">
+  <div class="kicker">חלק א׳</div>
+  <h1>הכלים והכללים</h1>
+  <p class="lead">לפני שמראים מה אפשר לעשות, צריך להבין על מה זה רץ ומה מותר</p>
+  <aside class="notes">[0:08] מעבר לחלק הראשון.</aside>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <div class="kicker">חינמי מול ארגוני</div>
+  <h1>ההבדל בין כלי חינמי לגרסה ארגונית הוא לא איכות התשובה, אלא מה קורה למידע</h1>
+  <div class="body">
+    <table class="t">
+      <thead><tr><th style="width:30%">שאלה</th><th>גרסה חינמית או אישית</th><th>גרסה ארגונית (צוות או ארגון)</th></tr></thead>
+      <tbody>
+        <tr><td>האם המידע משמש לאימון המודל?</td><td>ייתכן, תלוי בספק ובהגדרות המשתמש</td><td class="hl">לא, כברירת מחדל בהסכם</td></tr>
+        <tr><td>מי שולט בשמירה ובמחיקה?</td><td>המשתמש הבודד</td><td class="hl">מנהל המערכת, לפי מדיניות</td></tr>
+        <tr><td>ניהול הרשאות ותיעוד שימוש</td><td>אין</td><td class="hl">יש</td></tr>
+        <tr><td>מתאים למידע של לקוחות?</td><td>לא</td><td class="hl">כן, בכפוף לנהלי הארגון</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">כלל אצבע: <b>אם לא הייתם שולחים את זה במייל לגורם חיצוני, אל תדביקו את זה בכלי חינמי.</b></div>
+  </div>
+  <aside class="notes">[0:08 · 4 דק׳] להסביר שהמודל עצמו לרוב דומה, ההבדל הוא בחוזה ובהגדרות. משרדים רציניים עובדים על גרסאות ארגוניות. לשים לב שהניסוח "תלוי בספק ובהגדרות" מכוון: כל ספק משנה את התנאים מדי פעם, ולכן בודקים את ההסכם ולא מסתמכים על זיכרון.</aside>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="kicker">מי משתמש במה</div>
+  <h1>בשוק הפרטי ובמגזר הציבורי עובדים היום על כלים שונים</h1>
+  <div class="body">
+    <table class="t">
+      <thead><tr><th style="width:26%">כלי</th><th>איפה פוגשים אותו</th><th>שימוש אופייני</th></tr></thead>
+      <tbody>
+        <tr><td>קלוד</td><td>רוב המשרדים שאנחנו פוגשים, בגרסה ארגונית</td><td>ניתוח מסמכים, אקסל, דוחות ובניית רובוטים</td></tr>
+        <tr><td>צ׳אט ג׳י פי טי</td><td>עסקים ומשרדים, הרבה בשימוש אישי</td><td>כתיבה, סיכום ושאלות כלליות</td></tr>
+        <tr><td>קופיילוט</td><td>ארגונים שעובדים בסביבת מיקרוסופט</td><td>בתוך וורד, אקסל ואאוטלוק</td></tr>
+        <tr><td>ג׳מיני ונוטבוק אל אם</td><td>סביבת גוגל, כולל גופים ממשלתיים</td><td>סיכום תיקים, עבודה על מאגר מסמכים סגור</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">המשמעות: <b>הנישום והמייצג עשויים לעבוד עם כלים חזקים ושונים מאלה שלכם.</b> כדאי להכיר את שניהם.</div>
+  </div>
+  <aside class="notes">[0:12 · 3 דק׳] לא להיכנס להשוואת יכולות. המסר: המייצג שמולכם עובד עם כלי אחר, ולכן ההכרות עם מה שקורה בחוץ חשובה גם כשאצלכם עובדים בסביבה אחרת.</aside>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <div class="kicker">תיקון 13 לחוק הגנת הפרטיות</div>
+  <h1>תיקון 13 הפך הדבקת מידע אישי בכלי לא מאושר לחשיפה משפטית</h1>
+  <div class="body">
+    <div class="cols c2">
+      <div class="col">
+        <h2>מה השתנה</h2>
+        <ul class="clean">
+          <li>בתוקף מ־14 באוגוסט 2025</li>
+          <li>עיצומים כספיים וסמכויות אכיפה רחבות לרשות להגנת הפרטיות</li>
+          <li>פיצוי ללא הוכחת נזק</li>
+          <li>אחריות מוגברת להנהלה על עמידה בחוק</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h2>שלוש שאלות לפני כל העלאה</h2>
+        <ol class="num">
+          <li>האם יש כאן מידע מזהה?</li>
+          <li>האם הכלי מאושר לסוג המידע הזה?</li>
+          <li>האם אפשר להשמיט או להתמם לפני ההעלאה?</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">[0:15 · 4 דק׳] לא להרצות על החוק, הם מכירים אותו טוב יותר ממני. המסר הוא מעשי: המשרדים בחוץ שינו התנהגות בעקבות התיקון. משרד שמעלה חומרי לקוח לכלי חינמי חשוף. אצלכם הכלל עוד יותר חד: עובדים רק בסביבה המאושרת.</aside>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <div class="kicker">שלוש רמות שימוש</div>
+  <h1>יש שלוש רמות שימוש: שיחה, מיומנות ורובוט</h1>
+  <div class="body">
+    <div class="tiers">
+      <div class="tier t1"><div class="lv">רמה 1</div><h2>שיחה</h2><p>שואלים, מקבלים תשובה. כל פעם מתחילים מאפס.</p></div>
+      <div class="tier t2"><div class="lv">רמה 2</div><h2>מיומנות</h2><p>הוראות עבודה קבועות שהכלי טוען לבד. לדוגמה: "כך בודקים כרטסת בעל מניות".</p></div>
+      <div class="tier t3"><div class="lv">רמה 3</div><h2>רובוט</h2><p>מבצע רצף פעולות על קבצים ומחזיר תוצר מוגמר: דוח, טבלה או רשימת שאלות.</p></div>
+    </div>
+    <p class="muted" style="margin-top:34px">רוב המשתמשים נמצאים ברמה 1. המשרדים המתקדמים עובדים ברמות 2 ו־3.</p>
+  </div>
+  <aside class="notes">[0:19 · 3 דק׳] זה המושג החשוב ביותר בחלק הזה. מיומנות היא בעצם נוהל עבודה כתוב שהכלי זוכר. ההבדל בין משרד שמשתמש בבינה מלאכותית לבין משרד שבנה עליה תהליך הוא המעבר מרמה 1 לרמות 2 ו־3. היכולת הזו קיימת היום גם בכלים בסביבת גוגל.</aside>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <div class="kicker">העיקרון המנחה</div>
+  <h1>האדם נשאר במעגל: הבינה המלאכותית מרחיבה את המפקח ולא מחליפה אותו</h1>
+  <div class="body">
+    <div class="eq">
+      <div class="box">מפקח X</div><div class="op">←</div><div class="box acc">מפקח X + Y + Z</div>
+    </div>
+    <div class="cols c3" style="margin-top:40px">
+      <div><h2 class="acc">הכלי מבצע</h2><p>קורא, ממיין, משווה ומנסח טיוטה</p></div>
+      <div><h2 class="acc">האדם מבקר</h2><p>בודק מקורות, מספרים והיגיון</p></div>
+      <div><h2 class="acc">האדם אחראי</h2><p>מחליט, חותם ועומד מאחורי התוצר</p></div>
+    </div>
+  </div>
+  <aside class="notes">[0:22 · 3 דק׳] לחזור על המשפט הזה גם בסוף. המפקח שעד היום עבר על כרטסת ביד, יכול היום לבדוק עשרה תיקים באותו זמן, ולהשקיע את הזמן שהתפנה בשיקול הדעת. אותו דבר קורה בצד של רואה החשבון.</aside>
+</section>
+
+<!-- 11 divider -->
+<section class="slide divider">
+  <div class="kicker">חלק ב׳</div>
+  <h1>מה קורה היום במשרדים</h1>
+  <p class="lead">דוגמאות מעשיות מהשטח, כולל שלוש הדגמות חיות. כל הנתונים בהדגמות בדויים.</p>
+  <aside class="notes">[0:25] מעבר לחלק המרכזי. להזכיר: נתונים בדויים בלבד, שום מידע של לקוח אמיתי.</aside>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <div class="kicker">הנהלת חשבונות</div>
+  <h1>הנהלת החשבונות כבר לא מקלידה, היא מאשרת</h1>
+  <div class="body">
+    <div class="flow">
+      <div class="step">חשבונית נקלטת</div><div class="arrow">←</div>
+      <div class="step">קריאה וזיהוי</div><div class="arrow">←</div>
+      <div class="step">סיווג לכרטיס</div><div class="arrow">←</div>
+      <div class="step">סימון חריגים</div><div class="arrow">←</div>
+      <div class="step human">אישור אנושי</div><div class="arrow">←</div>
+      <div class="step">רישום</div>
+    </div>
+    <div class="flow-cap"><span>צילום או מייל</span><i></i><span>ספק, סכום, תאריך</span><i></i><span>לפי היסטוריה</span><i></i><span>סכום או ספק חריג</span><i></i><span>מנהלת החשבונות</span><i></i><span>בתוכנה</span></div>
+    <div class="callout">המשמעות לביקורת: <b>טעות סיווג כבר לא אקראית, היא שיטתית.</b> אם הכלל שגוי, הוא שגוי בכל השורות. מחפשים את הכלל, לא את השורה.</div>
+  </div>
+  <aside class="notes">[0:25 · 4 דק׳] לתאר את התהליך. התובנה החשובה למפקח: כשהקלדה ידנית הוחלפה בכלל אוטומטי, טעויות מתנהגות אחרת. הוצאה פרטית שסווגה פעם אחת כהוצאה עסקית, תסווג כך כל חודש. זה גם מקל על הביקורת: מספיק למצוא את הדפוס.</aside>
+</section>
+
+<!-- 13 -->
+<section class="slide">
+  <div class="kicker">קריאת תיקייה שלמה</div>
+  <h1>המחשב קורא תיקייה שלמה של חשבוניות ומראה בדיוק מה חסר</h1>
+  <div class="body">
+    <div class="mock">
+      <div class="bar"><span>תוצר לדוגמה · בדיקת שלמות חשבוניות ספקים, שנת 2025</span><span class="muted">נתונים בדויים</span></div>
+      <table class="t">
+        <thead><tr><th>ספק</th><th>חשבוניות שנמצאו</th><th>ממצא</th><th>סטטוס</th></tr></thead>
+        <tbody>
+          <tr><td>שכירות משרד</td><td>9 מתוך 12</td><td>חסרות מרץ, יולי ונובמבר</td><td><span class="tag">חסר</span></td></tr>
+          <tr><td>חברת ליסינג</td><td>14</td><td>שתי חשבוניות זהות באותו סכום ותאריך</td><td><span class="tag">כפילות</span></td></tr>
+          <tr><td>קבלן משנה</td><td>6</td><td>חשבונית מעל סף החובה ללא מספר הקצאה</td><td><span class="tag">חריג</span></td></tr>
+          <tr><td>ספק ציוד</td><td>11</td><td>תואם להנהלת החשבונות</td><td><span class="tag ok">תקין</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <aside class="notes">[0:29 · 3 דק׳] להסביר: מעלים תיקייה, והכלי מצליב בין המסמכים לבין הכרטסת. שימו לב לשורה של מספר ההקצאה: זה בדיוק סוג הבדיקה שמעניין גם אתכם. המשרדים עושים את זה לפני שהדוח מוגש.</aside>
+</section>
+
+<!-- 14 -->
+<section class="slide">
+  <div class="kicker">בדיקת כרטסות</div>
+  <h1>רובוט עובר על אלפי שורות כרטסת בדקות ומסמן רק את מה שדורש עין אנושית</h1>
+  <div class="body">
+    <div class="cols c2">
+      <ul class="clean">
+        <li>יתרת חובה של בעל מניות ומשיכות לאורך השנה</li>
+        <li>סכומים עגולים ותנועות במזומן</li>
+        <li>רישומים בסופי שבוע ובחגים</li>
+      </ul>
+      <ul class="clean">
+        <li>הוצאות בעלות אופי פרטי</li>
+        <li>כפילויות ורישומים ללא אסמכתא</li>
+        <li>רישומי סוף שנה שמתבטלים בתחילת השנה הבאה</li>
+      </ul>
+    </div>
+    <a class="demo" href="הדגמות/ניתוח-כרטסת.html" target="_blank">הדגמה חיה: ניתוח כרטסת בעל מניות <small>נתונים בדויים</small></a>
+  </div>
+  <aside class="notes">[0:32 · 7 דק׳ כולל הדגמה] לפתוח את ההדגמה. ללחוץ "נתח", להראות את הסיכום ואז שתיים או שלוש שורות מסומנות. לעצור על "שאלות מומלצות לדיון": זה החלק שהמפקחים מתחברים אליו. להזכיר שהרובוט לא מחליט, הוא מסמן. ההחלטה נשארת לאדם.</aside>
+</section>
+
+<!-- 15 -->
+<section class="slide">
+  <div class="kicker">ניתוח דוחות כספיים</div>
+  <h1>ניתוח דוח כספי מלא, מנקודת המבט של מפקח, לוקח היום דקות ולא ימים</h1>
+  <div class="body">
+    <ol class="num">
+      <li><b>קורא את הדוח מההתחלה ועד הסוף,</b> כולל הביאורים</li>
+      <li><b>משווה בין שנים</b> ומחשב יחסים: רווח גולמי, ימי מלאי, ימי לקוחות</li>
+      <li><b>מזהה התגלגלות:</b> לאן הלך הכסף ומה השתנה בעסק</li>
+      <li><b>מנסח שאלות לדיון</b> לפי סדר חשיבות</li>
+    </ol>
+    <a class="demo" href="הדגמות/ניתוח-דוח-כספי.html" target="_blank">הדגמה חיה: דוח כספי בעיני מפקח <small>נתונים בדויים</small></a>
+  </div>
+  <aside class="notes">[0:39 · 7 דק׳ כולל הדגמה] בהדגמה: להראות את הגרף של הכנסות מול רווח גולמי, ואז את הממצא הראשון. לשאול את הקהל: "מה הייתם שואלים את המייצג?" ורק אז לחשוף את השאלות שהכלי הציע. משרדים משתמשים בדיוק בכלי כזה כדי לדעת מה אתם תראו לפני שאתם רואים.</aside>
+</section>
+
+<!-- 16 -->
+<section class="slide">
+  <div class="kicker">תזרים בזמן אמת</div>
+  <h1>חיבור ישיר לבנקים נותן לעסק תמונת תזרים מלאה בכל רגע נתון</h1>
+  <div class="body">
+    <div class="flow">
+      <div class="step">חשבונות בנק</div><div class="arrow">←</div>
+      <div class="step">חיבור מאושר לבנקים</div><div class="arrow">←</div>
+      <div class="step">סיווג תנועות</div><div class="arrow">←</div>
+      <div class="step">תזרים יומי ותחזית</div><div class="arrow">←</div>
+      <div class="step human">התראה לבעלים</div>
+    </div>
+    <div class="callout">המשמעות לביקורת: <b>הנתונים קיימים, מסודרים ומתוארכים.</b> לעסק שעובד כך קל להפיק דוח תנועות מלא, והתשובה "אין לנו את זה" פחות סבירה.</div>
+  </div>
+  <aside class="notes">[0:46 · 3 דק׳] לא צריך לחכות לסוף שנה ולמאזן מבוקר כדי לדעת מה קורה בעסק. הבנקאות הפתוחה מאפשרת לעסק לראות כל שקל. מבחינתכם, זה אומר שהמידע קיים ונגיש, וכדאי לדעת לבקש אותו.</aside>
+</section>
+
+<!-- 17 -->
+<section class="slide">
+  <div class="kicker">דיוני ניכויים ושומות</div>
+  <h1>דיוני ניכויים ושומות כבר לא צריכים אדם שמחפש, אלא אדם שמבקר</h1>
+  <div class="body">
+    <table class="t">
+      <thead><tr><th style="width:24%">שלב</th><th>איך זה נעשה עד לאחרונה</th><th>איך זה נעשה היום</th></tr></thead>
+      <tbody>
+        <tr><td>איסוף</td><td>ידני, מסמך אחר מסמך</td><td class="hl">העלאת תיקייה אחת</td></tr>
+        <tr><td>השוואה</td><td>שורה מול שורה באקסל</td><td class="hl">הצלבה אוטומטית ורשימת פערים</td></tr>
+        <tr><td>טיעון</td><td>ניסוח מאפס</td><td class="hl">טיוטה עם הפניות, לבדיקה</td></tr>
+        <tr><td>שיקול דעת</td><td>אדם</td><td>אדם, ונשאר לו יותר זמן לזה</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <aside class="notes">[0:49 · 3 דק׳] להדגיש את השורה האחרונה. זה לא אומר שאין עבודה, זה אומר שהעבודה זזה לשיקול דעת. מייצג טוב מגיע היום לדיון עם הכנה שלקחה לו שעה במקום יומיים.</aside>
+</section>
+
+<!-- 18 -->
+<section class="slide">
+  <div class="kicker">הכנה לדיון שומה</div>
+  <h1>המשרדים מתכוננים לדיון השומה מול רובוט שמדמה את המפקח</h1>
+  <div class="body">
+    <div class="cols c2">
+      <div class="col">
+        <h2>איך זה עובד</h2>
+        <ul class="clean">
+          <li>הרובוט קורא את התיק ואת הדוחות</li>
+          <li>משחק את תפקיד המפקח ושואל את השאלות הקשות</li>
+          <li>מציף נקודות חולשה בתשובות</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h2>מה זה אומר עבורכם</h2>
+        <ul class="clean">
+          <li>המייצג שמגיע אליכם כבר שמע את השאלות</li>
+          <li>אפשר להפוך את הכלי: אתם מתרגלים מול מייצג מדומה</li>
+        </ul>
+      </div>
+    </div>
+    <a class="demo" href="הדגמות/סימולטור-דיון-שומה.html" target="_blank">הדגמה חיה: סימולטור דיון שומה <small>נתונים בדויים</small></a>
+  </div>
+  <aside class="notes">[0:52 · 8 דק׳ כולל הדגמה] להראות את הלשונית הראשונה: כך המשרד מתכונן אליכם. אחר כך לעבור ללשונית התרגול ולבקש ממתנדב מהקהל לבחור שאלה. לסיים בלשונית הפרומפט: להראות שהכלי כולו הוא דף הוראות אחד, בלי קוד ובלי העלאת מסמכים רגישים.</aside>
+</section>
+
+<!-- 19 -->
+<section class="slide">
+  <div class="kicker">חוות דעת</div>
+  <h1>חוות דעת נכתבות היום בעזרת בינה מלאכותית, והשאלה החשובה היא מי בדק את המקורות</h1>
+  <div class="body">
+    <div class="cols c2">
+      <div class="col">
+        <h2>שלושה סיכונים מוכרים</h2>
+        <ul class="clean">
+          <li>פסק דין שלא קיים</li>
+          <li>ציטוט שלא נאמר, או נאמר בהקשר אחר</li>
+          <li>סעיף חוק בנוסח ישן</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h2>מה כבר קרה</h2>
+        <ul class="clean">
+          <li>בתי משפט בישראל ובעולם הטילו הוצאות על הגשת פסיקה מומצאת</li>
+          <li>כלים משפטיים ייעודיים, המחוברים למאגרי פסיקה, נכנסים לשוק</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout">הבינה המלאכותית לא משקרת בכוונה, <b>היא משלימה את מה שנשמע סביר.</b> לכן כל הפניה נבדקת במקור.</div>
+  </div>
+  <aside class="notes">[1:00 · 4 דק׳] זה המקום שבו מפקח צריך להיות הכי ערני. דוגמה מהניסיון: כתבתי חוות דעת מורכבת בעזרת הכלי, והמבחן האמיתי היה לבדוק כל מקור. הכלים הכלליים מצוינים בניסוח וחלשים באיתור פסיקה. הכלים המשפטיים הייעודיים משפרים את זה, אבל לא מבטלים את הצורך בבדיקה.</aside>
+</section>
+
+<!-- 20 -->
+<section class="slide">
+  <div class="kicker">ניסוח מסמכים</div>
+  <h1>ארבעה הרגלים מבדילים בין טיוטה של בינה מלאכותית לבין מסמך מקצועי</h1>
+  <div class="body">
+    <ol class="num">
+      <li><b>הקשר מלא:</b> מי הקורא, מה המטרה ומה כבר ידוע</li>
+      <li><b>מקור מחייב:</b> מעלים את החוק או ההנחיה עצמם, ולא סומכים על הזיכרון של הכלי</li>
+      <li><b>הפניה לכל טענה:</b> מבקשים לציין סעיף או מסמך ליד כל קביעה</li>
+      <li><b>בדיקה צולבת:</b> כלי שני או אדם שני עוברים על התוצר</li>
+    </ol>
+    <p class="muted" style="margin-top:30px">דוגמה: מעלים את נוסח הוראות מיסוי הרווחים הכלואים, ומבקשים דוח תחשיב שכל שורה בו מפנה לסעיף.</p>
+  </div>
+  <aside class="notes">[1:04 · 3 דק׳] אם רוצים לקחת דבר אחד מהשקף הזה: ההרגל השני. כשהכלי עובד מתוך המסמך שהעליתם, איכות התוצר קופצת. זה בדיוק מה שנוטבוק אל אם עושה טוב, וזה כלי שכבר יש לכם.</aside>
+</section>
+
+<!-- 21 -->
+<section class="slide">
+  <div class="kicker">שירות לקוחות וזיופים</div>
+  <h1>מתמונה אחת אפשר לייצר היום סרטון מדבר, ולכן מסמך, קול או סרטון כבר אינם הוכחה בפני עצמם</h1>
+  <div class="body">
+    <div class="cols c2">
+      <div class="col">
+        <h2>מה המשרדים עושים</h2>
+        <ul class="clean">
+          <li>נציג שירות דיגיטלי שעונה ללקוחות מסביב לשעון</li>
+          <li>סרטוני הסבר בדמות ובקול של השותף, מתמונה אחת</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h2>מה זה אומר עבורכם</h2>
+        <ul class="clean">
+          <li>אישורים, חשבוניות וצילומים ניתנים לזיוף בקלות</li>
+          <li>שיחה קולית אינה אימות זהות</li>
+          <li>בודקים מול מקור עצמאי, לא מול המסמך עצמו</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">[1:07 · 3 דק׳] אפשר להראות את הסרטון שיצרתי מתמונה שלי, אם יש. המסר אינו להפחיד אלא להעלות מודעות: במוקד שירות של חברת רכב גדולה כבר היום עונה לפעמים רובוט, ורוב האנשים לא מבחינים. אם זה נכון לשירות לקוחות, זה נכון גם למסמכים שמוגשים אליכם.</aside>
+</section>
+
+<!-- 22 divider -->
+<section class="slide divider">
+  <div class="kicker">חלק ג׳</div>
+  <h1>מה זה אומר עבורכם</h1>
+  <p class="lead">מהבנה של מה שקורה בחוץ, לכלים לביקורת של מה שמגיע פנימה</p>
+  <aside class="notes">[1:10] מעבר לחלק האחרון.</aside>
+</section>
+
+<!-- 23 -->
+<section class="slide">
+  <div class="kicker">ביקורת תוצרים</div>
+  <h1>חמש בדיקות לכל תוצר שייתכן שנוצר בבינה מלאכותית</h1>
+  <div class="body">
+    <ol class="num">
+      <li><b>מקורות:</b> כל פסק דין, סעיף והנחיה קיימים ואומרים את מה שנטען?</li>
+      <li><b>מספרים:</b> הסכומים מתיישבים עם הנהלת החשבונות ועם הדוחות?</li>
+      <li><b>עקביות:</b> המסמך מתיישב עם מה שהנישום הגיש בעבר?</li>
+      <li><b>מקוריות:</b> אישור, חשבונית או צילום נבדקו מול מקור עצמאי?</li>
+      <li><b>אחריות:</b> מי חתום על התוצר, ומי בדק אותו?</li>
+    </ol>
+    <p class="muted" style="margin-top:28px">דף העזר המלא מצורף לחומרי המפגש.</p>
+  </div>
+  <aside class="notes">[1:10 · 4 דק׳] זה השקף שהכי חשוב שיצאו איתו. לעבור לאט, עם דוגמה קצרה לכל בדיקה. לחלק את דף העזר המודפס.</aside>
+</section>
+
+<!-- 24 -->
+<section class="slide">
+  <div class="kicker">להתחיל מחר</div>
+  <h1>בכלים שכבר יש לכם אפשר להתחיל מחר, במסגרת הנהלים</h1>
+  <div class="body">
+    <div class="cols c2">
+      <ul class="clean">
+        <li>סיכום תיק ארוך לנקודות לדיון</li>
+        <li>השוואת דוחות בין שנים ורשימת שינויים</li>
+      </ul>
+      <ul class="clean">
+        <li>רשימת שאלות לדיון מתוך דוח כספי</li>
+        <li>ניסוח דרישת מסמכים ממוקדת</li>
+      </ul>
+    </div>
+    <div class="callout">תמיד <b>בסביבה המאושרת בלבד</b> ולפי הנחיות אבטחת המידע של הרשות.</div>
+  </div>
+  <aside class="notes">[1:14 · 2 דק׳] לא להיכנס להדרכה על הכלים הפנימיים, את זה הם מקבלים בנפרד. רק לחבר: כל מה שראיתם היום, ברמה כזו או אחרת, אפשר לעשות גם אצלכם.</aside>
+</section>
+
+<!-- 25 -->
+<section class="slide">
+  <div class="kicker">הטמעה</div>
+  <h1>הטמעה מצליחה כשמי שמלמד מגיע מהשטח המקצועי</h1>
+  <div class="body">
+    <ul class="clean" style="max-width:1200px">
+      <li>ידע טכני בלבד לא מספיק. צריך להבין דיון שומה, כרטסת וחוות דעת.</li>
+      <li>לומדים מדוגמאות מתוך העבודה האמיתית, לא מדוגמאות כלליות.</li>
+      <li>ליווי מתמשך עדיף על הדרכה חד פעמית: הכלים משתנים כל כמה חודשים.</li>
+    </ul>
+  </div>
+  <aside class="notes">[1:16 · 1 דק׳] קצר ועדין. ארגונים רבים מביאים מדריך טכני מצוין שלא מכיר את העבודה המקצועית, והתוצאה לא נקלטת. להשאיר פתח להמשך בלי למכור.</aside>
+</section>
+
+<!-- 26 -->
+<section class="slide">
+  <div class="kicker">לסיכום</div>
+  <h1>שלושה דברים לקחת מכאן</h1>
+  <div class="body">
+    <ol class="num">
+      <li><b>הצד השני כבר עובד עם בינה מלאכותית,</b> ברמה של מיומנויות ורובוטים</li>
+      <li><b>האדם נשאר במעגל:</b> הכלי מבצע, אתם מבקרים ומחליטים</li>
+      <li><b>מסמך כבר אינו הוכחה בפני עצמו:</b> בודקים מקור, מספר וחתימה</li>
+    </ol>
+  </div>
+  <aside class="notes">[1:17 · 2 דק׳] לחזור על שלושת המסרים במילים שלי, לאט.</aside>
+</section>
+
+<!-- 27 -->
+<section class="slide title-slide">
+  <div class="kicker">שאלות</div>
+  <h1>תודה. נשמח לשאלות</h1>
+  <p class="lead">טל ולנשטין, רו״ח · קהילת איי איי פיננס</p>
+  <div class="meta"><span>חומרי המפגש: מצגת, דף עזר וספריית הנחיות</span></div>
+  <aside class="notes">[1:19 · עד 1:30] שאלות. אם אין שאלות, לפתוח שוב את סימולטור דיון השומה ולבקש מהקהל לבחור שאלה. לסיים בזמן.</aside>
+</section>
+
+</div>
+</div>
+
+<div class="notes-panel" id="notesPanel"><div class="t" id="notesTitle"></div><div id="notesText"></div></div>
+<div class="hud">
+  <button id="prevBtn" title="הקודם">→</button>
+  <span id="counter" dir="ltr">1 / 1</span>
+  <button id="nextBtn" title="הבא">←</button>
+  <button id="notesBtn" title="הערות מרצה (N)">הערות</button>
+  <button id="fsBtn" title="מסך מלא (F)">מסך מלא</button>
+</div>
+
+<script>
+(function(){
+  const deck=document.getElementById('deck');
+  const slides=[...deck.querySelectorAll('.slide')];
+  const total=slides.length;
+  let cur=0;
+  slides.forEach((s,i)=>s.setAttribute('data-num',(i+1)+' / '+total));
+
+  function fit(){
+    const notes=document.body.classList.contains('notes-on')?220:0;
+    const w=window.innerWidth, h=window.innerHeight-notes;
+    const sc=Math.min(w/1600,h/900)*0.97;
+    deck.style.transform='scale('+sc+')';
+  }
+  function show(i){
+    i=Math.max(0,Math.min(total-1,i));
+    const dir=i<cur;
+    slides.forEach((s,k)=>{s.classList.toggle('active',k===i);s.classList.toggle('back',dir&&k!==i);});
+    cur=i;
+    document.getElementById('counter').textContent=(i+1)+' / '+total;
+    document.getElementById('progress').style.width=((i+1)/total*100)+'%';
+    const n=slides[i].querySelector('aside.notes');
+    document.getElementById('notesTitle').textContent='שקף '+(i+1)+' · '+(slides[i].querySelector('.kicker')||{textContent:''}).textContent;
+    document.getElementById('notesText').textContent=n?n.textContent:'';
+    try{history.replaceState(null,'','#'+(i+1));}catch(e){}
+  }
+  const next=()=>show(cur+1), prev=()=>show(cur-1);
+  document.addEventListener('keydown',e=>{
+    if(['ArrowLeft','PageDown',' ','Enter'].includes(e.key)){e.preventDefault();next();}
+    else if(['ArrowRight','PageUp','Backspace'].includes(e.key)){e.preventDefault();prev();}
+    else if(e.key==='Home')show(0);
+    else if(e.key==='End')show(total-1);
+    else if(e.key==='n'||e.key==='N'||e.key==='מ')toggleNotes();
+    else if(e.key==='f'||e.key==='F'||e.key==='כ')toggleFs();
+  });
+  function toggleNotes(){document.body.classList.toggle('notes-on');fit();}
+  function toggleFs(){if(!document.fullscreenElement)document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();else document.exitFullscreen();}
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+  document.getElementById('notesBtn').onclick=toggleNotes;
+  document.getElementById('fsBtn').onclick=toggleFs;
+  deck.addEventListener('click',e=>{ if(e.target.closest('a'))return; const r=deck.getBoundingClientRect(); (e.clientX<r.left+r.width/2)?next():prev(); });
+  window.addEventListener('resize',fit);
+  fit();
+  window.addEventListener('hashchange',()=>{const k=parseInt(location.hash.slice(1),10);if(!isNaN(k)&&k-1!==cur)show(k-1);});
+  const h=parseInt(location.hash.slice(1),10);
+  show(isNaN(h)?0:h-1);
+})();
+</script>
+</body>
+</html>

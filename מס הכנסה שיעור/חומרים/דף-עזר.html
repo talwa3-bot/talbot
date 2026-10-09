@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>דף עזר: ביקורת תוצרי בינה מלאכותית</title>
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+  :root{--ink:#14181f;--muted:#6b7280;--accent:#0f5e6b;--line:#e6e8eb;--soft:#f3f6f7;
+    --font:"Assistant","Segoe UI","Arial Hebrew",Arial,sans-serif}
+  @page{size:A4;margin:12mm}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{background:#d9dde1}
+  body{font-family:var(--font);color:var(--ink);font-size:12.5pt;line-height:1.42}
+  .page{width:210mm;min-height:297mm;margin:16px auto;background:#fff;padding:13mm 14mm;box-shadow:0 6px 30px rgba(0,0,0,.12)}
+  .kicker{color:var(--accent);font-weight:700;font-size:10.5pt}
+  h1{font-size:23pt;font-weight:800;line-height:1.15;margin-top:2px}
+  .sub{color:var(--muted);font-size:11pt;margin-top:3px;padding-bottom:9px;border-bottom:2px solid var(--ink)}
+  h2{font-size:13.5pt;font-weight:800;margin:13px 0 6px}
+  ol.checks{list-style:none;counter-reset:n}
+  ol.checks li{counter-increment:n;position:relative;padding:7px 38px 7px 0;border-bottom:1px solid var(--line)}
+  ol.checks li::before{content:counter(n);position:absolute;right:0;top:7px;width:26px;height:26px;border:2px solid var(--accent);color:var(--accent);border-radius:50%;
+    display:grid;place-items:center;font-weight:800;font-size:11pt}
+  ol.checks b{font-weight:800}
+  ol.checks span{display:block;color:#343a44;font-size:11.2pt}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12mm}
+  ul.flags{list-style:none}
+  ul.flags li{padding:3px 16px 3px 0;position:relative;font-size:11.2pt}
+  ul.flags li::before{content:"";position:absolute;right:0;top:11px;width:9px;height:3px;background:var(--accent)}
+  .box{background:var(--soft);border-right:4px solid var(--accent);padding:9px 12px;margin-top:12px;font-size:11.5pt}
+  .box b{color:var(--accent)}
+  .foot{margin-top:12px;color:var(--muted);font-size:9.5pt;border-top:1px solid var(--line);padding-top:6px;display:flex;justify-content:space-between}
+  @media print{html{background:#fff}.page{margin:0;box-shadow:none;width:auto;min-height:auto;padding:0}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="kicker">דף עזר · מפגש העשרה למאמנים בראיית חשבון</div>
+  <h1>חמש בדיקות לכל תוצר שייתכן שנוצר בבינה מלאכותית</h1>
+  <p class="sub">לא מנסים לזהות אם מסמך נכתב בבינה מלאכותית. בודקים אם הוא נכון.</p>
+
+  <h2>חמש הבדיקות</h2>
+  <ol class="checks">
+    <li><b>מקורות</b><span>כל פסק דין, סעיף והנחיה קיימים? נבדקו במאגר מוסמך? אומרים את מה שנטען, ובנוסח העדכני?</span></li>
+    <li><b>מספרים</b><span>הסכומים מתיישבים עם הנהלת החשבונות, עם הדוחות ועם תנועות הבנק? הסיכומים מחושבים נכון?</span></li>
+    <li><b>עקביות</b><span>המסמך מתיישב עם מה שהנישום הגיש בעבר, ועם תשובות קודמות באותו דיון?</span></li>
+    <li><b>מקוריות</b><span>אישור, חשבונית, צילום או הקלטה נבדקו מול מקור עצמאי: מספר הקצאה, הספק, הבנק?</span></li>
+    <li><b>אחריות</b><span>מי חתום על התוצר? מי בדק אותו? אפשר לקבל את גיליונות העבודה המקוריים?</span></li>
+  </ol>
+
+  <div class="two">
+    <div>
+      <h2>סימנים שמצדיקים בדיקה נוספת</h2>
+      <ul class="flags">
+        <li>הפניה לפסק דין בלי מספר הליך או תאריך</li>
+        <li>ציטוט שמתאים לטענה בצורה מושלמת מדי</li>
+        <li>ניסוח אחיד ומלוטש, גם בנושאים שבהם הנישום לא בקיא</li>
+        <li>טבלאות עם סכומים עגולים או סיכומים שלא מתיישבים</li>
+        <li>סתירה בין חלקים שונים של אותו מסמך</li>
+        <li>תשובה כללית ומשכנעת בלי מספר אחד</li>
+      </ul>
+    </div>
+    <div>
+      <h2>שלוש שאלות לפני שמעלים מידע לכלי</h2>
+      <ul class="flags">
+        <li>האם יש כאן מידע מזהה?</li>
+        <li>האם הכלי מאושר בארגון לסוג המידע הזה?</li>
+        <li>האם אפשר להשמיט או להתמם לפני ההעלאה?</li>
+      </ul>
+      <h2>ארבעה הרגלים לתוצר טוב</h2>
+      <ul class="flags">
+        <li><b>הקשר מלא:</b> מי הקורא ומה המטרה</li>
+        <li><b>מקור מחייב:</b> מעלים את החוק או ההנחיה עצמם</li>
+        <li><b>הפניה לכל טענה:</b> סעיף או מסמך ליד כל קביעה</li>
+        <li><b>בדיקה צולבת:</b> כלי שני או אדם שני</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="box"><b>האדם נשאר במעגל.</b> הכלי קורא, ממיין ומנסח. האדם בודק, מחליט וחותם. מסמך, קול או סרטון אינם הוכחה בפני עצמם.</div>
+
+  <div class="foot"><span>טל ולנשטין, רו״ח · קהילת איי איי פיננס</span><span>חומר הדרכה. אינו מהווה הנחיה מקצועית מחייבת.</span></div>
+</div>
+</body>
+</html>

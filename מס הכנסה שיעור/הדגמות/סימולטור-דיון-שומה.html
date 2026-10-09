@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>סימולטור דיון שומה</title>
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+  :root{--ink:#14181f;--muted:#6b7280;--accent:#0f5e6b;--line:#e6e8eb;--soft:#f3f6f7;--bg:#fff;--ease:cubic-bezier(.2,.8,.2,1);
+    --font:"Assistant","Segoe UI","Arial Hebrew",Arial,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);color:var(--ink);background:var(--bg);font-size:17px;line-height:1.5}
+  .wrap{max-width:1240px;margin:0 auto;padding:36px 28px 60px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:2px solid var(--ink);padding-bottom:18px}
+  .kicker{color:var(--accent);font-weight:700;font-size:15px}
+  h1{font-size:34px;font-weight:800;line-height:1.2;margin-top:4px}
+  .sub{color:var(--muted);margin-top:6px}
+  .badge{border:1.5px solid var(--muted);color:var(--muted);font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
+
+  .tabs{display:flex;gap:0;margin-top:22px;border-bottom:1px solid var(--line)}
+  .tabs button{font:inherit;font-weight:700;font-size:17px;background:none;border:none;padding:12px 20px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px}
+  .tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+  .pane{display:none;padding-top:24px}
+  .pane.on{display:block;animation:in 220ms var(--ease)}
+  @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .case{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line)}
+  .case div{padding:12px 16px;border-left:1px solid var(--line)}
+  .case div:last-child{border-left:none}
+  .case span{display:block;font-size:13px;color:var(--muted);font-weight:700}
+  .case b{font-size:16px}
+  h2{font-size:24px;font-weight:800;margin:28px 0 4px}
+  .h2sub{color:var(--muted);margin-bottom:12px}
+
+  .prep{border:1px solid var(--line);margin-top:12px;display:grid;grid-template-columns:1fr 1fr 1fr}
+  .prep > div{padding:14px 18px;border-left:1px solid var(--line)}
+  .prep > div:last-child{border-left:none;background:var(--soft)}
+  .prep span{display:block;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:4px}
+  .prep > div:last-child span{color:var(--accent)}
+
+  .sim{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start}
+  .chat{border:1px solid var(--line);display:flex;flex-direction:column;height:620px}
+  .chat-head{padding:12px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;font-weight:700}
+  .chat-head small{color:var(--muted);font-weight:400}
+  .log{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
+  .msg{max-width:78%;padding:10px 14px;line-height:1.5;animation:in 200ms var(--ease)}
+  .msg .who{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:2px}
+  .msg.me{align-self:flex-start;background:var(--ink);color:#fff}
+  .msg.me .who{color:#c7cbd1}
+  .msg.rep{align-self:flex-end;background:var(--soft);border:1px solid var(--line)}
+  .msg.coach{align-self:stretch;max-width:100%;border-right:4px solid var(--accent);background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .msg.coach .who{color:var(--accent)}
+  .typing{align-self:flex-end;color:var(--muted);font-size:14px}
+  .composer{border-top:1px solid var(--line);padding:12px;display:flex;gap:8px}
+  .composer input{flex:1;font:inherit;padding:10px 12px;border:1.5px solid var(--line);outline:none}
+  .composer input:focus{border-color:var(--accent)}
+  button.btn{font:inherit;cursor:pointer;border:1.5px solid var(--ink);background:#fff;color:var(--ink);padding:9px 16px;font-weight:700;transition:transform 140ms var(--ease),background 140ms var(--ease)}
+  button.btn:active{transform:scale(.97)}
+  button.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .side h3{font-size:17px;font-weight:800;margin-bottom:8px}
+  .qs{display:flex;flex-direction:column;gap:6px}
+  .qs button{font:inherit;text-align:right;background:#fff;border:1px solid var(--line);padding:9px 12px;cursor:pointer;font-size:15px;line-height:1.35;
+    transition:transform 140ms var(--ease),border-color 140ms var(--ease)}
+  .qs button:hover{border-color:var(--accent)}
+  .qs button:active{transform:scale(.98)}
+  .qs button.done{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
+  .qs button.follow{border-color:var(--accent);color:var(--accent);font-weight:700}
+  .meter{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
+  .meter .track{height:6px;background:var(--line);margin-top:6px}
+  .meter .track i{display:block;height:100%;background:var(--accent);width:0;transition:width 240ms var(--ease)}
+  .docs{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
+  .docs ol{margin-right:20px;font-size:15px}
+  .docs .empty{color:var(--muted);font-size:14px}
+
+  pre{white-space:pre-wrap;background:var(--soft);padding:18px;font-family:var(--font);font-size:15.5px;line-height:1.65;border:1px solid var(--line)}
+  .row{display:flex;gap:10px;align-items:center;margin:10px 0}
+  .ok{color:var(--accent);font-weight:700;font-size:14px}
+  .note{margin-top:30px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);padding-top:12px}
+  @media (max-width:900px){.sim{grid-template-columns:1fr}.prep{grid-template-columns:1fr}.case{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="kicker">רובוט להדגמה · הכנה לדיון שומה</div>
+      <h1>סימולטור דיון שומה</h1>
+      <div class="sub">אותו כלי, שני צדדים: המשרד מתכונן מול מפקח מדומה, והמפקח מתרגל מול מייצג מדומה.</div>
+    </div>
+    <span class="badge">תיק ונתונים בדויים</span>
+  </header>
+
+  <div class="tabs" id="tabs">
+    <button class="on" data-p="p1">1 · כך המשרד מתכונן אליכם</button>
+    <button data-p="p2">2 · תרגול: אתם המפקחים</button>
+    <button data-p="p3">3 · ההוראות שמאחורי הכלי</button>
+  </div>
+
+  <!-- pane 1 -->
+  <section class="pane on" id="p1">
+    <div class="case">
+      <div><span>נישום</span><b>נחשון יבוא ושיווק בע״מ (בדוי)</b></div>
+      <div><span>שנות מס</span><b>2023 עד 2025</b></div>
+      <div><span>מחזור 2025</span><b>25.6 מיליון ₪</b></div>
+      <div><span>שלב</span><b>דיון ראשון אצל המפקח</b></div>
+    </div>
+    <h2>הרובוט קרא את הדוחות ושיחק את המפקח</h2>
+    <p class="h2sub">זה מה שהמייצג רואה לפני שהוא נכנס אליכם: השאלות הצפויות, התשובה שהוכנה, והמקום שבו הרובוט צופה שתלחצו.</p>
+    <div id="prepList"></div>
+  </section>
+
+  <!-- pane 2 -->
+  <section class="pane" id="p2">
+    <div class="sim">
+      <div class="chat">
+        <div class="chat-head"><span>דיון שומה · נחשון יבוא ושיווק בע״מ</span><small>אתם המפקחים · הרובוט הוא המייצג</small></div>
+        <div class="log" id="log"></div>
+        <form class="composer" id="composer">
+          <input id="free" placeholder="כתבו שאלה בחופשיות, או בחרו שאלה מהרשימה" autocomplete="off">
+          <button class="btn primary" type="submit">שאל</button>
+        </form>
+      </div>
+      <aside class="side">
+        <h3>שאלות לבחירה</h3>
+        <div class="qs" id="qs"></div>
+        <div class="meter"><b>כיסוי נושאים</b> <span id="cov">0 מתוך 8</span><div class="track"><i id="covBar"></i></div></div>
+        <div class="docs"><h3>דרישת מסמכים שנבנית מהדיון</h3><div id="docs"><p class="empty">עדיין אין דרישות. שאלות המשך מוסיפות דרישות.</p></div>
+          <div class="row"><button class="btn" id="copyDocs" type="button">העתק דרישה</button><span class="ok" id="copied"></span></div></div>
+        <div class="row"><button class="btn" id="restart" type="button">התחל מחדש</button></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- pane 3 -->
+  <section class="pane" id="p3">
+    <h2 style="margin-top:0">כל הכלי הוא דף הוראות אחד</h2>
+    <p class="h2sub">מדביקים בכלי מאושר, מצרפים את תיק הדוגמה (או תיק מותמם בלבד), ובוחרים תפקיד. בלי קוד, ובלי להעלות מסמכים רגישים לכלי לא מאושר.</p>
+    <pre id="prompt">תפקיד: את/ה משתתף/ת בסימולציה של דיון שומה לצורכי הדרכה בלבד.
+מצב (לבחור אחד):
+א. "מפקח": את/ה מפקח/ת מס מנוסה. המשתמש הוא המייצג.
+ב. "מייצג": את/ה רואה החשבון המייצג את הנישום. המשתמש הוא המפקח.
+
+חומר הרקע: תיק הדוגמה המצורף (דוחות כספיים לשלוש שנים וכרטסת בעל מניות). אין להשתמש במידע אחר.
+
+כללי הסימולציה:
+1. שאלה אחת בכל פעם. תשובות קצרות, כמו בדיון אמיתי.
+2. במצב "מייצג": ענה/י כמו מייצג מקצועי שמגן על הלקוח. לפעמים התשובה מלאה, לפעמים כללית או מתחמקת, ולפעמים סותרת תשובה קודמת. אל תמציא/י מסמכים שלא קיימים בתיק.
+3. אחרי כל תשובה, הוסף/י שורה בשם "הערת מאמן": מה חלש בתשובה, ואיזו שאלת המשך כדאי לשאול.
+4. במצב "מפקח": שאל/י לפי סדר חשיבות, והתעקש/י על מספרים ומסמכים.
+5. כשהמשתמש כותב "סיכום": הצג/י טבלה של נושאים שנדונו, נקודות תורפה שזוהו, ודרישת מסמכים מסודרת עם מועדים.
+6. אין לקבוע חבות במס או מסקנה משפטית. זו סימולציה.
+
+התחל/י בהצגה קצרה של התיק ובשאלה הראשונה או בהמתנה לשאלה, לפי המצב שנבחר.</pre>
+    <div class="row"><button class="btn primary" id="copyPrompt" type="button">העתק את ההוראות</button><span class="ok" id="copiedP"></span></div>
+  </section>
+
+  <p class="note">הדגמה לצורכי הדרכה. החברה, הנתונים והתשובות בדויים. בגרסה זו התשובות מוכנות מראש כדי שההדגמה תעבוד גם בלי חיבור לרשת.</p>
+</div>
+
+<script>
+(function(){
+  const T=[
+    {id:'gm',short:'ירידה ברווח הגולמי',kw:['גולמי','רווחיות','מחיר','מחירים'],
+     q:'שיעור הרווח הגולמי ירד מ־31% ל־24.6% בשנתיים. מה ההסבר?',
+     a:'השוק נהיה תחרותי מאוד. נכנסו מתחרים מחו״ל ונאלצנו להוריד מחירים כדי לשמור על נתח שוק. בנוסף, עלויות השילוח עלו משמעותית.',
+     c:'תשובה כללית, בלי מספרים. אם המחירים ירדו, זה צריך להופיע במחירונים ובחשבוניות. עלויות שילוח צריכות להופיע בניתוח עלות המכר.',
+     fq:'תציגו מחירון של 2023 מול 2025 לעשרת המוצרים המובילים, וניתוח של עלות המכר לפי רכיבים.',
+     fa:'אפשר להכין את זה. זה ייקח כמה שבועות, כי המחירונים לא מרוכזים במקום אחד.',
+     fc:'התשובה מאשרת שאין תיעוד מרוכז. לרשום כדרישת מסמכים עם מועד.',
+     doc:'מחירונים לשנים 2023 ו־2025 לעשרת המוצרים המובילים, וניתוח עלות המכר לפי רכיבים'},
+    {id:'mgmt',short:'דמי ניהול לחברה קשורה',kw:['ניהול','קשורה','דמי'],
+     q:'איזה שירות קיבלה החברה תמורת דמי הניהול לחברה הקשורה?',
+     a:'החברה הקשורה מעסיקה את מנהל הכספים ואת מנהל הרכש, שנותנים שירות לשתי החברות. החיוב משקף את החלק היחסי.',
+     c:'טענה סבירה, אבל חסרים הסכם ומפתח חלוקה. וגם: האם הסכום הוכפל כי העלות גדלה, או כי הרווח גדל?',
+     fq:'מה מפתח החלוקה, ולמה הסכום הוכפל ב־2025?',
+     fa:'המפתח הוא לפי היקף פעילות. ב־2025 הפעילות גדלה, ולכן החלק שלנו גדל.',
+     fc:'המחזור גדל ב־17% והחיוב גדל ב־100%. הפער לא מוסבר. לבקש את חישוב המפתח ואת הדוחות של החברה המקבלת.',
+     doc:'הסכם דמי ניהול, חישוב מפתח החלוקה, ודוח רווח והפסד של החברה הקשורה'},
+    {id:'sh',short:'יתרת חובה של בעל המניות',kw:['בעל המניות','בעל מניות','משיכות','משיכה','יתרת חובה'],
+     q:'יתרת החובה של בעל המניות עלתה ל־1.14 מיליון ₪. מה מהות המשיכות?',
+     a:'מדובר במקדמות על חשבון דיבידנד. בכוונת החברה להכריז על דיבידנד בשנה הבאה ולקזז.',
+     c:'"בכוונה להכריז" אינו הכרזה. לבחון משיכות שלא הוחזרו לפי סעיף 3(ט1), וריבית רעיונית לפי סעיף 3(ט).',
+     fq:'האם נרשמה ריבית על היתרה? ואיזה חלק מהיתרה נמשך ב־2024 ולא הוחזר עד היום?',
+     fa:'לא נרשמה ריבית, כי מדובר במקדמה על דיבידנד. לגבי הפירוט, אצטרך לבדוק.',
+     fc:'הסיווג כמקדמה אינו פוטר מבדיקה. לבקש פירוט משיכות לפי שנים.',
+     doc:'פירוט משיכות בעל המניות לפי שנים ומועדי החזרה, והחלטות דירקטוריון בנושא חלוקה'},
+    {id:'fin',short:'אשראי בנקאי מול משיכות',kw:['אשראי','בנק','מימון','הלוואה'],
+     q:'החברה הגדילה את האשראי הבנקאי פי 3.8, ובמקביל העבירה כספים לבעל המניות. למה?',
+     a:'האשראי שימש למימון המלאי והלקוחות, לא את בעל המניות. אלה שני דברים נפרדים.',
+     c:'כסף הוא תחליפי. בלי ההעברות לבעל המניות, היה נדרש אשראי קטן יותר. רלוונטי לייחוס הוצאות המימון.',
+     fq:'תציגו תזרים חודשי לשנת 2025, שמראה את מועדי המשיכות מול ניצול האשראי.',
+     fa:'נצטרך להפיק את זה מהבנק.',
+     fc:'עסק שמחובר לבנקים יכול להפיק דוח תנועות בקלות. לבקש עם מועד.',
+     doc:'דוח תנועות בנק חודשי לשנת 2025 ופירוט מסגרות האשראי'},
+    {id:'ar',short:'עלייה בימי הלקוחות',kw:['לקוחות','גבייה','גיול'],
+     q:'ימי הלקוחות עלו מ־61 ל־92. מי הלקוחות הגדולים, והאם יש ביניהם צד קשור?',
+     a:'הלקוח הגדול שלנו הוא רשת קמעונאית שמשלמת שוטף פלוס 120. אין צדדים קשורים בין הלקוחות.',
+     c:'תשובה ספציפית. כדאי לאמת בגיול לקוחות, ולבדוק כמה מהיתרה מרוכז בלקוח אחד.',
+     fq:'תמציאו גיול לקוחות ליום 31.12.2025 ואת ההסכם עם הרשת.',
+     fa:'אין בעיה, זה זמין ונעביר עוד השבוע.',
+     fc:'תשובה מוכנה וזמינה מעידה על הכנה. כאן אפשר להתקדם.',
+     doc:'גיול לקוחות ליום 31.12.2025 והסכם ההתקשרות עם הלקוח הגדול'},
+    {id:'inv',short:'עלייה בימי המלאי',kw:['מלאי','ספירה','מחסן'],
+     q:'ימי המלאי עלו ל־99. איך נספר המלאי בסוף 2025?',
+     a:'ספירה מלאה ב־31.12 בנוכחות רואה החשבון המבקר. המלאי גדל כי רכשנו מראש, לפני עליית מחירים.',
+     c:'הסבר עקבי לכאורה. אבל רכש מראש לפני עליית מחירים אמור לשפר את הרווח הגולמי בהמשך, לא להוריד אותו. לחבר לשאלת הרווח הגולמי.',
+     fq:'אם רכשתם מראש במחיר נמוך, למה הרווח הגולמי ירד?',
+     fa:'חלק מהמלאי נמכר בהנחות כדי לפנות מקום במחסן.',
+     fc:'סתירה: רכש מראש כדי לחסוך, ומכירה בהנחה כדי לפנות מקום. זו נקודת תורפה. לבקש דוח מכירות בהנחה.',
+     doc:'דוח ספירת מלאי ליום 31.12.2025 ודוח מכירות בהנחה של יותר מ־20%'},
+    {id:'car',short:'גידול בהוצאות הרכב',kw:['רכב','רכבים','דלק'],
+     q:'הוצאות הרכב כמעט הוכפלו. כמה רכבים יש, ומי משתמש בהם?',
+     a:'ארבעה רכבים: שלושה לאנשי המכירות ואחד למנכ״ל. שווי השימוש נזקף לכולם.',
+     c:'אם מספר הרכבים קבוע, גידול של 97% לא מוסבר. לשאול מה השתנה.',
+     fq:'אם מספר הרכבים לא השתנה, מה מסביר גידול של 97%?',
+     fa:'ב־2025 הוחלף הרכב של המנכ״ל לרכב יוקרה, והוצאות הדלק עלו.',
+     fc:'לבדוק את שווי השימוש שנזקף למנכ״ל אחרי ההחלפה, ושימוש של בני משפחה.',
+     doc:'רשימת רכבים ומשתמשים, ותלושי השכר של המנכ״ל עם שווי השימוש לשנת 2025'},
+    {id:'ai',short:'שימוש בבינה מלאכותית',kw:['בינה','מלאכותית','צ׳אט','רובוט','ai'],
+     q:'האם השתמשתם בכלי בינה מלאכותית בהכנת הדוחות או התשובות?',
+     a:'השתמשנו בכלי לניתוח הכרטסות ולהכנה לדיון. כל הנתונים נבדקו על ידי צוות המשרד.',
+     c:'שאלה לגיטימית. אין חובה לדווח על שימוש, אבל כדאי לדעת מי בדק ומה. אפשר לבקש את גיליונות העבודה המקוריים.',
+     doc:'גיליונות העבודה ששימשו להכנת התשובות'}
+  ];
+
+  // pane 1: preparation view
+  document.getElementById('prepList').innerHTML=T.slice(0,6).map((t,i)=>`<div class="prep">
+    <div><span>שאלה צפויה ${i+1}</span>${t.q}</div>
+    <div><span>התשובה שהמשרד הכין</span>${t.a}</div>
+    <div><span>איפה המפקח צפוי ללחוץ</span>${t.c}</div></div>`).join('');
+
+  // tabs
+  document.getElementById('tabs').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    [...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));
+    document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id===b.dataset.p));
+  });
+
+  // pane 2: simulation
+  const log=document.getElementById('log'), qs=document.getElementById('qs');
+  let asked=new Set(), followed=new Set(), docs=[], busy=false;
+  function msg(cls,who,text){
+    const d=document.createElement('div'); d.className='msg '+cls; d.innerHTML=`<span class="who">${who}</span>${text}`; log.appendChild(d); log.scrollTop=log.scrollHeight; return d;
+  }
+  function renderQs(){
+    qs.innerHTML='';
+    T.forEach(t=>{
+      if(asked.has(t.id)&&t.fq&&!followed.has(t.id)){
+        const f=document.createElement('button'); f.className='follow'; f.textContent='שאלת המשך: '+t.fq; f.onclick=()=>ask(t,true); qs.appendChild(f);
+      }
+    });
+    T.forEach(t=>{
+      const b=document.createElement('button'); b.textContent=t.q; if(asked.has(t.id))b.className='done'; b.onclick=()=>ask(t,false); qs.appendChild(b);
+    });
+    document.getElementById('cov').textContent=asked.size+' מתוך '+T.length;
+    document.getElementById('covBar').style.width=(asked.size/T.length*100)+'%';
+    const box=document.getElementById('docs');
+    box.innerHTML=docs.length?'<ol>'+docs.map(d=>`<li>${d}</li>`).join('')+'</ol>':'<p class="empty">עדיין אין דרישות. שאלות המשך מוסיפות דרישות.</p>';
+  }
+  function ask(t,follow,freeText){
+    if(busy)return; busy=true;
+    msg('me','המפקח/ת',freeText||(follow?t.fq:t.q));
+    const typing=document.createElement('div'); typing.className='typing'; typing.textContent='המייצג מקליד…'; log.appendChild(typing); log.scrollTop=log.scrollHeight;
+    setTimeout(()=>{
+      typing.remove();
+      msg('rep','המייצג',follow?t.fa:t.a);
+      setTimeout(()=>{
+        msg('coach','הערת מאמן',follow?t.fc:t.c);
+        if(follow){followed.add(t.id); if(!docs.includes(t.doc))docs.push(t.doc);}
+        else{asked.add(t.id); if(!t.fq&&!docs.includes(t.doc))docs.push(t.doc);}
+        if(asked.size===T.length&&followed.size>=3&&!log.dataset.sum){log.dataset.sum=1; summary();}
+        busy=false; renderQs();
+      },450);
+    },700);
+  }
+  function summary(){
+    msg('coach','סיכום הדיון',`נדונו ${asked.size} נושאים, ${followed.size} מהם עם שאלת המשך. נקודות התורפה המרכזיות: פער בין גידול המחזור לגידול בדמי הניהול, יתרת בעל המניות ללא ריבית, והסתירה בין רכש מראש למכירה בהנחה. דרישת המסמכים מוכנה בצד.`);
+  }
+  document.getElementById('composer').addEventListener('submit',e=>{
+    e.preventDefault(); const inp=document.getElementById('free'); const v=inp.value.trim(); if(!v||busy)return; inp.value='';
+    const low=v.toLowerCase();
+    const hit=T.find(t=>t.kw.some(k=>low.includes(k.toLowerCase())));
+    if(hit){ const follow=asked.has(hit.id)&&hit.fq&&!followed.has(hit.id); ask(hit,follow,v); }
+    else{ msg('me','המפקח/ת',v); setTimeout(()=>msg('rep','המייצג','לא בטוח שהבנתי. אפשר לחדד לאיזה סעיף בדוחות מתייחסת השאלה?'),500); }
+  });
+  function start(){
+    log.innerHTML=''; asked=new Set(); followed=new Set(); docs=[]; delete log.dataset.sum;
+    msg('rep','המייצג','בוקר טוב. אני רואה החשבון של נחשון יבוא ושיווק. הבאתי את הדוחות לשנים 2023 עד 2025 ואת הכרטסות. נשמח לענות על כל שאלה.');
+    renderQs();
+  }
+  document.getElementById('restart').onclick=start;
+  document.getElementById('copyDocs').onclick=()=>{
+    const txt='דרישת מסמכים, נחשון יבוא ושיווק בע״מ (בדוי)\n'+docs.map((d,i)=>`${i+1}. ${d}`).join('\n');
+    copy(txt,'copied');
+  };
+  document.getElementById('copyPrompt').onclick=()=>copy(document.getElementById('prompt').textContent,'copiedP');
+  function copy(txt,id){
+    const done=()=>{const el=document.getElementById(id); el.textContent='הועתק'; setTimeout(()=>el.textContent='',1600);};
+    try{navigator.clipboard.writeText(txt).then(done,()=>fallback(txt,done));}catch(e){fallback(txt,done);}
+  }
+  function fallback(txt,done){const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove(); done();}
+  start();
+})();
+</script>
+</body>
+</html>

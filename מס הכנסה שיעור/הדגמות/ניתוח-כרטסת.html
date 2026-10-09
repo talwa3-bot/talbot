@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ניתוח כרטסת בעל מניות</title>
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+  :root{--ink:#14181f;--muted:#6b7280;--accent:#0f5e6b;--line:#e6e8eb;--soft:#f3f6f7;--bg:#fff;--ease:cubic-bezier(.2,.8,.2,1);
+    --font:"Assistant","Segoe UI","Arial Hebrew",Arial,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);color:var(--ink);background:var(--bg);font-size:17px;line-height:1.5}
+  .wrap{max-width:1240px;margin:0 auto;padding:36px 28px 80px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:2px solid var(--ink);padding-bottom:18px}
+  .kicker{color:var(--accent);font-weight:700;font-size:15px;letter-spacing:.02em}
+  h1{font-size:34px;font-weight:800;line-height:1.2;margin-top:4px}
+  .sub{color:var(--muted);margin-top:6px}
+  .badge{border:1.5px solid var(--muted);color:var(--muted);font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
+  .meta{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:22px;border:1px solid var(--line)}
+  .meta div{padding:12px 16px;border-left:1px solid var(--line)}
+  .meta div:last-child{border-left:none}
+  .meta span{display:block;font-size:13px;color:var(--muted);font-weight:700}
+  .meta b{font-size:17px}
+  .actions{display:flex;gap:12px;align-items:center;margin:26px 0 8px;flex-wrap:wrap}
+  button{font:inherit;cursor:pointer;border:1.5px solid var(--ink);background:#fff;color:var(--ink);padding:10px 20px;font-weight:700;
+    transition:transform 140ms var(--ease),background 140ms var(--ease)}
+  button:active{transform:scale(.97)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-size:18px;padding:12px 30px}
+  button.primary:hover{background:#0c4d58}
+  button:disabled{opacity:.5;cursor:default}
+  .status{color:var(--muted);font-size:15px}
+  .bar{height:3px;background:var(--line);margin-top:10px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width 120ms linear}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:28px}
+  .kpi{border-top:4px solid var(--line);padding-top:12px}
+  .kpi.on{border-top-color:var(--accent)}
+  .kpi span{font-size:14px;color:var(--muted);font-weight:700}
+  .kpi b{display:block;font-size:32px;font-weight:800;font-variant-numeric:tabular-nums;direction:ltr;text-align:right}
+  .kpi small{color:var(--muted);font-size:13px}
+
+  h2{font-size:24px;font-weight:800;margin:38px 0 6px}
+  .h2sub{color:var(--muted);margin-bottom:14px}
+  .finding{border:1px solid var(--line);border-right:4px solid var(--accent);margin-top:14px;opacity:0;transform:translateY(6px);
+    animation:in 240ms var(--ease) forwards}
+  @keyframes in{to{opacity:1;transform:none}}
+  .f-head{display:flex;justify-content:space-between;gap:16px;padding:14px 18px;cursor:pointer;align-items:center}
+  .f-head h3{font-size:19px;font-weight:800}
+  .f-head p{color:var(--muted);font-size:15px}
+  .f-count{font-weight:800;color:var(--accent);white-space:nowrap;font-size:15px}
+  .f-body{display:none;padding:0 18px 18px}
+  .finding.open .f-body{display:block}
+  .q{background:var(--soft);padding:12px 16px;margin-top:12px}
+  .q b{color:var(--accent);font-size:14px;display:block;margin-bottom:4px}
+  .q li{margin-right:18px}
+  .law{font-size:14px;color:var(--muted);margin-top:8px}
+
+  table{width:100%;border-collapse:collapse;font-size:15px;margin-top:8px}
+  th{text-align:right;color:var(--muted);font-size:13px;font-weight:700;padding:8px 10px;border-bottom:1.5px solid var(--ink);position:sticky;top:0;background:#fff}
+  td{padding:7px 10px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  td.n{text-align:left;direction:ltr}
+  tr.flag td{background:var(--soft)}
+  tr.flag td:first-child{box-shadow:inset -3px 0 0 var(--accent)}
+  tr.after td{color:var(--muted);font-style:italic}
+  .tags{display:flex;gap:4px;flex-wrap:wrap}
+  .tag{font-size:12px;font-weight:700;border:1.5px solid var(--accent);color:var(--accent);padding:0 7px;border-radius:999px;white-space:nowrap}
+  .ledger{max-height:520px;overflow:auto;border:1px solid var(--line)}
+  .filters{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .filters button{font-size:14px;padding:6px 14px;border-width:1px}
+  .filters button.on{background:var(--ink);color:#fff}
+
+  details{margin-top:36px;border-top:2px solid var(--ink);padding-top:14px}
+  summary{cursor:pointer;font-weight:800;font-size:20px}
+  pre{white-space:pre-wrap;background:var(--soft);padding:18px;margin-top:12px;font-family:var(--font);font-size:15px;line-height:1.6}
+  .note{margin-top:30px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);padding-top:12px}
+  .hidden{display:none}
+  @media (max-width:760px){.meta,.kpis{grid-template-columns:1fr 1fr}h1{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="kicker">רובוט להדגמה · בדיקת כרטסות</div>
+      <h1>ניתוח כרטסת חו״ז בעל מניות</h1>
+      <div class="sub">הרובוט עובר על כל השורות ומסמן רק את מה שדורש עין אנושית. ההחלטה נשארת אצל הבודק.</div>
+    </div>
+    <span class="badge">נתונים בדויים לחלוטין</span>
+  </header>
+
+  <div class="meta">
+    <div><span>חברה</span><b>מגדלור סחר והפצה בע״מ (בדוי)</b></div>
+    <div><span>כרטיס</span><b>חו״ז בעל מניות, ישראל ישראלי</b></div>
+    <div><span>תקופה</span><b>שנת המס 2025</b></div>
+    <div><span>מקור</span><b>ייצוא כרטסת מתוכנת הנהלת החשבונות</b></div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="run">נתח את הכרטסת</button>
+    <button id="reset" class="hidden">איפוס</button>
+    <span class="status" id="status">הכרטסת נטענה. לחצו "נתח" כדי להריץ את הבדיקות.</span>
+  </div>
+  <div class="bar"><i id="prog"></i></div>
+
+  <section id="results" class="hidden">
+    <div class="kpis">
+      <div class="kpi"><span>שורות שנבדקו</span><b id="k1">0</b><small>כולל תנועות אחרי תאריך המאזן</small></div>
+      <div class="kpi on"><span>שורות שסומנו</span><b id="k2">0</b><small id="k2s"></small></div>
+      <div class="kpi"><span>סכום השורות שסומנו</span><b id="k3">0</b><small>חובה וזכות יחד</small></div>
+      <div class="kpi on"><span>יתרה ליום 31.12.2025</span><b id="k4">0</b><small>יתרת חובה: בעל המניות חייב לחברה</small></div>
+    </div>
+
+    <h2>ממצאים לפי סדר חשיבות</h2>
+    <p class="h2sub">לחצו על ממצא כדי לראות את השורות ואת השאלות המומלצות לדיון.</p>
+    <div id="findings"></div>
+  </section>
+
+  <h2 style="margin-top:44px">הכרטסת</h2>
+  <div class="filters" id="filters">
+    <button class="on" data-f="all">כל השורות</button>
+    <button data-f="flag" disabled>רק שורות מסומנות</button>
+  </div>
+  <div class="ledger"><table><thead><tr><th>תאריך</th><th>אסמכתא</th><th>פרטים</th><th style="text-align:left">חובה</th><th style="text-align:left">זכות</th><th style="text-align:left">יתרה</th><th>סימון</th></tr></thead><tbody id="tbody"></tbody></table></div>
+
+  <details>
+    <summary>ההוראות שמאחורי הרובוט (מיומנות)</summary>
+    <pre>תפקיד: את/ה בודק/ת כרטסות מנוסה, הבוחן כרטיס חו״ז בעל מניות לקראת דיון.
+קלט: ייצוא כרטסת (תאריך, אסמכתא, פרטים, חובה, זכות, יתרה).
+בצע/י את הבדיקות הבאות, וסמן/י כל שורה שעונה על אחת מהן:
+1. יתרת חובה של בעל המניות לאורך השנה ובסופה. ציין/י את החודשים ביתרת חובה.
+2. רישומים בתוך 5 ימים לפני סוף השנה, שמתבטלים בסכום זהה בתחילת השנה הבאה.
+3. משיכות במזומן, ובפרט סכומים עגולים.
+4. הוצאות בעלות אופי פרטי לפי תיאור התנועה.
+5. כפילויות: אותו סכום, אותו תאריך ואותו תיאור.
+6. שורות ללא אסמכתא.
+7. רישומים בשבת או בחג.
+פלט: טבלת ממצאים לפי סדר חשיבות, השורות הרלוונטיות, ושאלות מומלצות לדיון.
+כללים: אל תקבע/י מסקנה משפטית. סמן/י ושאל/י. כל ממצא מפנה לשורות המקור.</pre>
+  </details>
+
+  <p class="note">הדגמה לצורכי הדרכה. כל השמות, הסכומים והתנועות בדויים. הבדיקות מסמנות שורות לבדיקה ואינן קובעות חבות במס.</p>
+</div>
+
+<script>
+(function(){
+  // ---------- data (fictitious) ----------
+  const holidays={'2025-04-13':'פסח','2025-06-02':'שבועות','2025-09-23':'ראש השנה','2025-09-24':'ראש השנה','2025-10-02':'יום כיפור','2025-10-07':'סוכות'};
+  const rows=[];
+  let refN=4101;
+  const iso=(y,m,d)=>`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const isSat=s=>new Date(s+'T12:00:00').getDay()===6;
+  function clean(y,m,d){ // move recurring entries off Saturdays and holidays
+    let dt=new Date(Date.UTC(y,m-1,d,12));
+    while(true){const s=dt.toISOString().slice(0,10); if(!isSat(s)&&!holidays[s])return s; dt.setUTCDate(dt.getUTCDate()+1);}
+  }
+  const add=(date,desc,dr,cr,ref)=>rows.push({date,desc,dr:dr||0,cr:cr||0,ref:ref===undefined?('BNK-'+(refN++)):ref});
+
+  add('2025-01-01','יתרת פתיחה',62400,0,'');
+  const card=[2310,2875,3140,2460,3920,2780,4350,2690,3010,2580,3470,4120];
+  for(let m=1;m<=12;m++){
+    add(clean(2025,m,5),'העברה לחשבון פרטי',14000,0);
+    add(clean(2025,m,15),'חיוב כרטיס אשראי, הוצאות שונות',card[m-1],0);
+    if(m%3===0) add(clean(2025,m,27),'זיכוי דמי ניהול לבעל המניות',0,30000);
+  }
+  // planted items
+  add('2025-02-12','משיכת מזומן',20000,0);
+  add('2025-03-09','קניות בסופרמרקט',1850,0);
+  add('2025-04-12','העברה לחשבון פרטי',9000,0);
+  add('2025-05-11','משיכת מזומן',30000,0,'');
+  add('2025-06-19','תשלום ביטוח רכב',7450,0,'BNK-4180');
+  add('2025-06-19','תשלום ביטוח רכב',7450,0,'BNK-4180');
+  add('2025-07-22','חופשה משפחתית, מלון באילת',12600,0);
+  add('2025-09-01','שכר לימוד גן ילדים',4200,0);
+  add('2025-10-02','העברה לחשבון פרטי',6000,0);
+  add('2025-10-18','רכישת ציוד',5300,0,'');
+  add('2025-11-20','מסעדה, ארוחה משפחתית',2340,0);
+  add('2025-12-30','הפקדה, החזר חוב בעל מניות',0,150000);
+  // after balance-sheet date
+  add('2026-01-02','העברה לחשבון פרטי',150000,0);
+  add('2026-01-05','העברה לחשבון פרטי',14000,0);
+
+  rows.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+  let bal=0; rows.forEach((r,i)=>{bal+=r.dr-r.cr; r.bal=bal; r.i=i; r.after=r.date>'2025-12-31'; r.tags=[];});
+
+  // ---------- helpers ----------
+  const fmt=n=>(n<0?'-':'')+'₪'+Math.abs(Math.round(n)).toLocaleString('he-IL');
+  const num=n=>n?Math.round(n).toLocaleString('he-IL'):'';
+  const dd=s=>{const [y,m,d]=s.split('-');return `${d}.${m}.${y}`;};
+  const personal=['סופרמרקט','מלון','חופשה','גן ילדים','מסעדה','ביגוד','תכשיט','חוג'];
+
+  // ---------- rules ----------
+  const rules=[
+    {id:'yearend',tag:'קישוט מאזן',title:'החזר חוב בסוף השנה שבוטל בתחילת השנה הבאה',
+      law:'לבחון את מהות ההחזר לצורך סעיף 3(ט1) לפקודה ולצורך היתרה המדווחת במאזן.',
+      test:(r)=>{ if(r.after||r.cr<50000||r.date<'2025-12-26')return false;
+        return rows.some(x=>x.after&&x.dr===r.cr&&x.date<='2026-01-15'); },
+      also:(r)=>rows.filter(x=>x.after&&x.dr===r.cr),
+      q:['מה מקור הכספים שהופקדו ב־30.12?','מדוע נמשך סכום זהה יומיים לאחר מכן?','האם ההחזר נועד להקטין את יתרת החובה במאזן בלבד?']},
+    {id:'debit',tag:'יתרת חובה',title:'יתרת חובה של בעל המניות לאורך כל השנה',
+      law:'לבחון ריבית רעיונית לפי סעיף 3(ט) לפקודה, ומשיכות שלא הוחזרו לפי סעיף 3(ט1).',
+      test:null,
+      q:['האם נחתם הסכם הלוואה בין החברה לבעל המניות?','האם נרשמה הכנסת ריבית בחברה, ובאיזה שיעור?','אילו משיכות משנים קודמות טרם הוחזרו?']},
+    {id:'cash',tag:'מזומן עגול',title:'משיכות מזומן בסכומים עגולים',
+      law:'לבחון את ייעוד המזומן ואת סיווג המשיכה.',
+      test:r=>!r.after&&/מזומן/.test(r.desc)&&r.dr>=5000&&r.dr%1000===0,
+      q:['למה שימש המזומן?','האם קיימים מסמכים התומכים בשימוש עסקי?']},
+    {id:'personal',tag:'אופי פרטי',title:'הוצאות בעלות אופי פרטי שנרשמו בכרטיס',
+      law:'לבחון אם ההוצאה נרשמה גם כהוצאה בחברה, ואם מדובר בטובת הנאה.',
+      test:r=>!r.after&&personal.some(k=>r.desc.includes(k)),
+      q:['האם ההוצאה נרשמה גם בדוח רווח והפסד של החברה?','האם בעל המניות שילם על ההוצאה או החזיר אותה?']},
+    {id:'dup',tag:'כפילות',title:'רישום כפול: אותו תאריך, אותו סכום ואותה אסמכתא',
+      law:'לבחון אם מדובר בטעות רישום או בתשלום כפול בפועל.',
+      test:r=>rows.filter(x=>x.date===r.date&&x.dr===r.dr&&x.cr===r.cr&&x.desc===r.desc).length>1,
+      q:['האם התשלום בוצע פעמיים בפועל?','אם לא, מתי ואיך תוקן הרישום?']},
+    {id:'noref',tag:'ללא אסמכתא',title:'תנועות ללא אסמכתא',
+      law:'רישום ללא אסמכתא מקשה על אימות מהות התנועה.',
+      test:r=>!r.ref&&r.desc!=='יתרת פתיחה',
+      q:['מהי האסמכתא לתנועה?','מי אישר את הרישום?']},
+    {id:'sat',tag:'שבת או חג',title:'רישומים בשבת או בחג',
+      law:'רישום בתאריך חריג אינו פסול, אך כדאי לוודא את מועד התנועה בפועל.',
+      test:r=>!r.after&&(isSat(r.date)||!!holidays[r.date]),
+      q:['האם התאריך משקף את מועד התנועה בפועל?','האם מדובר בתנועה בבנק או ברישום ידני?']}
+  ];
+
+  // ---------- render ledger ----------
+  const tbody=document.getElementById('tbody');
+  let mode='all';
+  function renderLedger(){
+    tbody.innerHTML='';
+    rows.forEach(r=>{
+      if(mode==='flag'&&!r.tags.length)return;
+      const tr=document.createElement('tr');
+      if(r.tags.length)tr.className='flag';
+      if(r.after)tr.className+=' after';
+      tr.innerHTML=`<td>${dd(r.date)}</td><td>${r.ref||(r.desc==='יתרת פתיחה'?'':'<span style="color:var(--muted)">חסר</span>')}</td><td>${r.desc}${r.after?' · לאחר תאריך המאזן':''}</td>
+        <td class="n">${num(r.dr)}</td><td class="n">${num(r.cr)}</td><td class="n">${num(r.bal)}</td>
+        <td><div class="tags">${r.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  renderLedger();
+
+  document.getElementById('filters').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b||b.disabled)return;
+    mode=b.dataset.f; [...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b)); renderLedger();
+  });
+
+  // ---------- run ----------
+  const runBtn=document.getElementById('run'), status=document.getElementById('status'), prog=document.getElementById('prog');
+  runBtn.onclick=()=>{
+    runBtn.disabled=true; let i=0; const n=rows.length;
+    const steps=['קורא את הכרטסת','מחשב יתרות חודשיות','מחפש כפילויות','בודק תיאורי תנועות','מצליב מול תחילת השנה הבאה','מנסח שאלות לדיון'];
+    const t=setInterval(()=>{
+      i+=Math.ceil(n/18); prog.style.width=Math.min(100,i/n*100)+'%';
+      status.textContent=steps[Math.min(steps.length-1,Math.floor(i/n*steps.length))]+'…';
+      if(i>=n){clearInterval(t); analyze();}
+    },70);
+  };
+  document.getElementById('reset').onclick=()=>location.reload();
+
+  function analyze(){
+    const found=[];
+    rules.forEach(rule=>{
+      let hits=[];
+      if(rule.id==='debit'){
+        const months=new Set(); rows.filter(r=>!r.after&&r.bal>0).forEach(r=>months.add(r.date.slice(5,7)));
+        const yearEnd=[...rows].filter(r=>!r.after).pop();
+        if(yearEnd.bal>0){ hits=[yearEnd]; rule.extra=`יתרת חובה ב־${months.size} מתוך 12 חודשים. יתרת חובה ליום 31.12.2025: ${fmt(yearEnd.bal)}. יתרת השיא בשנה: ${fmt(Math.max(...rows.filter(r=>!r.after).map(r=>r.bal)))}.`; }
+      } else {
+        hits=rows.filter(rule.test);
+        if(rule.also) hits.forEach(h=>rule.also(h).forEach(x=>{if(!hits.includes(x))hits.push(x);}));
+      }
+      if(hits.length){ hits.forEach(h=>{if(!h.tags.includes(rule.tag))h.tags.push(rule.tag);}); found.push({rule,hits}); }
+    });
+
+    const flagged=rows.filter(r=>r.tags.length);
+    const yearEnd=[...rows].filter(r=>!r.after).pop();
+    document.getElementById('k1').textContent=rows.length;
+    document.getElementById('k2').textContent=flagged.length;
+    document.getElementById('k2s').textContent=Math.round(flagged.length/rows.length*100)+'% מהשורות';
+    document.getElementById('k3').textContent=fmt(flagged.reduce((s,r)=>s+r.dr+r.cr,0));
+    document.getElementById('k4').textContent=fmt(yearEnd.bal);
+
+    const box=document.getElementById('findings'); box.innerHTML='';
+    found.forEach((f,idx)=>{
+      const d=document.createElement('div'); d.className='finding'+(idx===0?' open':''); d.style.animationDelay=(idx*60)+'ms';
+      const rowsHtml=f.hits.map(r=>`<tr class="${r.after?'after':''}"><td>${dd(r.date)}</td><td>${r.ref||'חסר'}</td><td>${r.desc}</td><td class="n">${num(r.dr)}</td><td class="n">${num(r.cr)}</td><td class="n">${num(r.bal)}</td></tr>`).join('');
+      d.innerHTML=`<div class="f-head"><div><h3>${idx+1}. ${f.rule.title}</h3><p>${f.rule.extra||f.rule.law}</p></div><span class="f-count">${f.hits.length} ${f.hits.length===1?'שורה':'שורות'}</span></div>
+        <div class="f-body">
+          ${f.rule.extra?`<p class="law">${f.rule.law}</p>`:''}
+          <table><thead><tr><th>תאריך</th><th>אסמכתא</th><th>פרטים</th><th style="text-align:left">חובה</th><th style="text-align:left">זכות</th><th style="text-align:left">יתרה</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+          <div class="q"><b>שאלות מומלצות לדיון</b><ul>${f.rule.q.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+        </div>`;
+      d.querySelector('.f-head').onclick=()=>d.classList.toggle('open');
+      box.appendChild(d);
+    });
+
+    document.getElementById('results').classList.remove('hidden');
+    document.querySelector('[data-f="flag"]').disabled=false;
+    document.getElementById('reset').classList.remove('hidden');
+    status.textContent=`הניתוח הסתיים: ${found.length} סוגי ממצאים, ${flagged.length} שורות לבדיקה.`;
+    renderLedger();
+    document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+})();
+</script>
+</body>
+</html>
