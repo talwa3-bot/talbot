@@ -1,0 +1,1 @@
+Source: https://github.com/bridge-craftwork/bridge-solver (release 2.0.0 wasm package), MIT OR Apache-2.0
