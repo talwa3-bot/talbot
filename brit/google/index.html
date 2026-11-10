@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>אישור הגעה לברית</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600&family=Frank+Ruhl+Libre:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0f2a4a;--blue:#1f5fa8;--sky:#8ec1ec;--ice:#eaf4fd;--gold:#c9a45c}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Heebo,sans-serif;color:var(--navy);
+ background:linear-gradient(160deg,#cfe6fa 0%,#9cc9ee 45%,#5e9ad4 100%);
+ display:flex;align-items:center;justify-content:center;padding:24px 16px;position:relative;overflow-x:hidden}
+#bears{position:fixed;inset:0;z-index:0;opacity:.32;pointer-events:none}
+.card{position:relative;z-index:1;width:100%;max-width:460px;background:rgba(255,255,255,.93);
+ backdrop-filter:blur(6px);border-radius:28px;padding:40px 28px 32px;text-align:center;
+ box-shadow:0 30px 70px rgba(15,42,74,.35);border:1px solid rgba(255,255,255,.8)}
+.bear-top{width:96px;height:96px;margin:-84px auto 8px;filter:drop-shadow(0 8px 10px rgba(15,42,74,.3))}
+.kicker{letter-spacing:.3em;font-size:12px;color:var(--blue);font-weight:600}
+h1{font-family:'Frank Ruhl Libre',serif;font-size:40px;margin:6px 0 4px;color:var(--navy)}
+.sub{font-size:16px;color:#3b5f8a;margin:0 0 6px;font-weight:300}
+.orn{height:1px;margin:18px auto;width:140px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.details{font-size:15px;line-height:1.7;color:#27476f;margin-bottom:22px}
+label.f{display:block;text-align:right;font-size:14px;font-weight:600;margin:14px 0 6px}
+input[type=text]{width:100%;padding:14px 16px;border:2px solid #cfe0f2;border-radius:14px;font:inherit;font-size:16px;background:#fff;color:var(--navy);transition:.2s}
+input[type=text]:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 4px rgba(31,95,168,.15)}
+.choice{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.choice label{cursor:pointer}
+.choice input{position:absolute;opacity:0}
+.choice span{display:block;padding:14px 8px;border-radius:14px;border:2px solid #cfe0f2;background:#fff;font-weight:600;transition:.2s}
+.choice input:checked+span{background:linear-gradient(135deg,var(--blue),var(--navy));color:#fff;border-color:transparent;box-shadow:0 8px 18px rgba(31,95,168,.4)}
+#guestsBox{overflow:hidden;max-height:140px;transition:.3s}
+#guestsBox.hide{max-height:0;opacity:0}
+.stepper{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:4px}
+.stepper button{width:46px;height:46px;border-radius:50%;border:2px solid var(--blue);background:#fff;color:var(--blue);font-size:24px;cursor:pointer}
+.stepper button:active{background:var(--ice)}
+.stepper output{font-size:30px;font-weight:600;min-width:40px}
+.go{margin-top:24px;width:100%;padding:16px;border:0;border-radius:16px;font:inherit;font-size:18px;font-weight:600;color:#fff;cursor:pointer;
+ background:linear-gradient(135deg,var(--blue),var(--navy));box-shadow:0 12px 24px rgba(15,42,74,.35)}
+.go:disabled{opacity:.6}
+.err{color:#b3261e;font-size:14px;min-height:18px;margin-top:10px}
+.thanks{display:none}
+.gift{display:none;margin-top:20px;padding:18px 14px;border-radius:18px;background:var(--ice);border:1px solid #cfe0f2}
+.gift .gt{margin:0 0 12px;font-weight:600;color:var(--navy)}
+.gb{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.gb a{flex:1 1 140px;padding:13px 10px;border-radius:14px;color:#fff;font-weight:600;text-decoration:none;background:linear-gradient(135deg,var(--blue),var(--navy));box-shadow:0 8px 18px rgba(31,95,168,.35)}
+.gb a[hidden]{display:none}
+.sign{font-size:17px;color:var(--navy);margin:0;line-height:1.6}
+.thanks h2{font-family:'Frank Ruhl Libre',serif;font-size:32px;margin:10px 0}
+</style>
+</head>
+<body>
+<svg id="bears" width="100%" height="100%"><defs>
+ <g id="b"><circle cx="20" cy="22" r="11"/><circle cx="60" cy="22" r="11"/><ellipse cx="40" cy="44" rx="28" ry="26"/>
+ <circle cx="31" cy="40" r="3" fill="#0f2a4a"/><circle cx="49" cy="40" r="3" fill="#0f2a4a"/>
+ <ellipse cx="40" cy="52" rx="9" ry="7" fill="#dcecfb"/><ellipse cx="40" cy="49" rx="3.5" ry="2.5" fill="#0f2a4a"/></g>
+ <pattern id="p" width="150" height="150" patternUnits="userSpaceOnUse">
+  <g fill="#fff" transform="translate(10,12) rotate(-12 40 40)"><use href="#b"/></g>
+  <g fill="#b9d9f5" transform="translate(88,84) scale(.8) rotate(10 40 40)"><use href="#b"/></g>
+ </pattern></defs><rect width="100%" height="100%" fill="url(#p)"/></svg>
+
+<main class="card">
+ <svg class="bear-top" viewBox="0 0 80 80"><g fill="#fff" stroke="#1f5fa8" stroke-width="2.5"><circle cx="18" cy="20" r="12"/><circle cx="62" cy="20" r="12"/><ellipse cx="40" cy="44" rx="30" ry="28"/></g>
+ <circle cx="18" cy="20" r="5" fill="#8ec1ec"/><circle cx="62" cy="20" r="5" fill="#8ec1ec"/>
+ <circle cx="30" cy="40" r="3.5" fill="#0f2a4a"/><circle cx="50" cy="40" r="3.5" fill="#0f2a4a"/>
+ <ellipse cx="40" cy="53" rx="10" ry="8" fill="#dcecfb"/><ellipse cx="40" cy="50" rx="4" ry="3" fill="#0f2a4a"/>
+ <path d="M34 57q6 5 12 0" stroke="#0f2a4a" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+
+ <div id="form">
+  <div class="kicker">הזמנה לברית</div>
+  <h1>נשמח לראותכם</h1>
+  <p class="sub">לכבוד הכנסתו של בננו הקטן בבריתו של אברהם אבינו</p>
+  <div class="orn"></div>
+  <div class="details">
+   <!-- TODO: עדכני תאריך, שעה ומקום -->
+   📅 [תאריך הברית] &nbsp;·&nbsp; 🕙 [שעה]<br>📍 [שם האולם / כתובת]
+  </div>
+  <form id="f" novalidate>
+   <label class="f" for="name">שם מלא</label>
+   <input type="text" id="name" name="name" autocomplete="name" maxlength="100" placeholder="למשל: משפחת כהן">
+   <label class="f">האם תגיעו?</label>
+   <div class="choice">
+    <label><input type="radio" name="status" value="yes" checked><span>מגיעים 🐻</span></label>
+    <label><input type="radio" name="status" value="no"><span>לא מגיעים</span></label>
+   </div>
+   <div id="guestsBox">
+    <label class="f">כמה אורחים (כולל אתכם)?</label>
+    <div class="stepper"><button type="button" id="minus" aria-label="פחות">−</button><output id="cnt">1</output><button type="button" id="plus" aria-label="יותר">+</button></div>
+   </div>
+   <div class="err" id="err"></div>
+   <button class="go" id="go" type="submit">שליחת אישור</button>
+  </form>
+ </div>
+
+ <div class="thanks" id="thanks">
+  <div class="kicker">תודה רבה</div>
+  <h2 id="tt"></h2>
+  <div class="orn"></div>
+  <p class="sub" id="ts"></p>
+  <div class="gift" id="gift">
+   <p class="gt">מי שרוצה לשמח אותנו במתנה</p>
+   <div class="gb">
+    <a id="bitBtn" target="_blank" rel="noopener">מתנה בביט</a>
+    <a id="payboxBtn" target="_blank" rel="noopener">מתנה בפייבוקס</a>
+   </div>
+  </div>
+  <div class="orn"></div>
+  <p class="sign"><span id="sg">באהבה,</span><br><b>משפחת יהלומי</b></p>
+ </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let n = 1;
+const status = () => document.querySelector('input[name=status]:checked').value;
+$('plus').onclick = () => { n = Math.min(30, n + 1); $('cnt').textContent = n; };
+$('minus').onclick = () => { n = Math.max(1, n - 1); $('cnt').textContent = n; };
+document.querySelectorAll('input[name=status]').forEach(r => r.onchange = () =>
+  $('guestsBox').classList.toggle('hide', status() === 'no'));
+
+// קישור אישי: ?name=משפחת+כהן ממלא את השם מראש
+// קישורי תשלום למתנה: הדביקי כאן את הקישור מביט ומפייבוקס (אם ריק, הכפתור לא יופיע)
+const BIT_URL = '';
+const PAYBOX_URL = 'https://links.payboxapp.com/4Eb3iLbyS6b';
+const PREFILL = <?!= JSON.stringify(prefill) ?>;
+if (BIT_URL) $('bitBtn').href = BIT_URL; else $('bitBtn').hidden = true;
+if (PAYBOX_URL) $('payboxBtn').href = PAYBOX_URL; else $('payboxBtn').hidden = true;
+if (PREFILL) $('name').value = PREFILL;
+
+function fail() {
+  $('err').textContent = 'משהו השתבש, נסו שוב';
+  $('go').disabled = false; $('go').textContent = 'שליחת אישור';
+}
+function done() {
+  $('form').style.display = 'none'; $('thanks').style.display = 'block';
+  if (status() === 'yes') {
+    $('tt').textContent = 'מחכים לכם!';
+    $('ts').textContent = `רשמנו ${n} ${n === 1 ? 'אורח' : 'אורחים'}. נתראה בשמחה 💙`;
+  } else {
+    $('tt').textContent = 'לא נורא';
+    $('ts').textContent = 'נתראה בחגיגה הבאה 💙';
+    $('sg').textContent = 'אוהבים,';
+  }
+  if (BIT_URL || PAYBOX_URL) $('gift').style.display = 'block';
+}
+$('f').onsubmit = e => {
+  e.preventDefault();
+  const name = $('name').value.trim();
+  if (!name) { $('err').textContent = 'נא להזין שם'; return; }
+  $('err').textContent = '';
+  $('go').disabled = true; $('go').textContent = 'שולח...';
+  google.script.run.withSuccessHandler(done).withFailureHandler(fail)
+    .submitRSVP({ name, status: status(), guests: status() === 'yes' ? n : 0 });
+};
+</script>
+</body>
+</html>
