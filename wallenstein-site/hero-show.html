@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>חלופה ג׳ לפתיחה | חגי ולנשטין ושות׳</title>
+<link rel="icon" href="../assets/cropped-favicon-1-32x32.png">
+<style>
+@font-face{font-family:OfficeSans;src:url(assistant-variable.ttf) format('truetype');font-weight:200 800;font-display:swap}
+@font-face{font-family:OfficeSerif;src:url(frank-ruhl-bold.ttf) format('truetype');font-weight:700;font-display:swap}
+:root{--ink:#102f40;--blue:#2559ad;--red:#b5121b;--line:#d5deea;--muted:#4f6276;--font:OfficeSans,Arial,sans-serif;--serif:OfficeSerif,Georgia,serif}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:400 18px/1.6 var(--font);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+h1,h2,p{margin:0}
+:focus-visible{outline:3px solid #5189d7;outline-offset:4px}
+.sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+/* top bar */
+.topbar{position:relative;z-index:5;padding:18px 48px;display:flex;align-items:center;justify-content:space-between;gap:24px;border-bottom:1px solid #e6ecf3;background:#fff}
+.topbar nav{display:flex;gap:30px;font-size:16px}
+.topbar nav a{padding:6px 0;position:relative}
+.topbar nav a:after{content:'';position:absolute;inset-inline:0;bottom:0;height:2px;background:var(--red);transform:scaleX(0);transform-origin:right;transition:transform .35s}
+.topbar nav a:hover:after{transform:scaleX(1)}
+.tools{display:flex;align-items:center;gap:22px;font-size:15px}
+.wa{display:inline-flex;align-items:center;gap:7px}
+.wa svg{width:18px;height:18px;fill:#25d366}
+
+/* opening */
+.opening{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(320px,1fr);min-height:calc(100vh - 70px);max-height:860px}
+.identity{position:relative;isolation:isolate;overflow:hidden;padding:56px 56px 48px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:#fff}
+.identity:before{content:'';position:absolute;inset:0;z-index:-2;background-image:repeating-linear-gradient(0deg,transparent 0 47px,#e9eff6 47px 48px);mask-image:radial-gradient(ellipse at 50% 45%,#000 10%,transparent 72%);-webkit-mask-image:radial-gradient(ellipse at 50% 45%,#000 10%,transparent 72%);opacity:.8}
+.spot{position:absolute;z-index:-1;width:620px;height:620px;border-radius:50%;left:var(--mx,50%);top:var(--my,40%);translate:-50% -50%;background:radial-gradient(circle,#2559ad14,transparent 65%);pointer-events:none;transition:left .5s ease-out,top .5s ease-out}
+.logo-wrap{perspective:900px}
+.logo{display:block;width:min(400px,80%);height:auto;margin:auto;animation:logoIn 1.3s cubic-bezier(.16,.8,.2,1) both;transition:transform .4s ease-out;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg))}
+@keyframes logoIn{from{opacity:0;filter:blur(10px);scale:.92}to{opacity:1;filter:blur(0);scale:1}}
+
+.slogan{font-family:var(--serif);font-weight:700;font-size:clamp(30px,3.3vw,50px);line-height:1.2;margin-top:34px;letter-spacing:-.005em;text-wrap:balance}
+.slogan .w{display:inline-block;opacity:0;translate:0 .5em;animation:rise .8s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(.75s + var(--i)*.11s)}
+.slogan .mark{position:relative;white-space:nowrap}
+.slogan .mark svg{position:absolute;inset-inline:-4%;bottom:-.28em;width:108%;height:.42em;overflow:visible}
+.slogan .mark path{fill:none;stroke:var(--red);stroke-width:3.2;stroke-linecap:round;stroke-dasharray:240;stroke-dashoffset:240;animation:draw 1s cubic-bezier(.6,0,.2,1) 1.6s forwards}
+@keyframes rise{to{opacity:1;translate:0 0}}
+@keyframes draw{to{stroke-dashoffset:0}}
+.scope{max-width:540px;margin-top:22px;color:var(--muted);font-size:18px;line-height:1.75;text-wrap:balance;opacity:0;animation:rise .8s 1.5s forwards}
+.actions{display:flex;gap:26px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:30px;opacity:0;animation:rise .8s 1.7s forwards}
+.primary{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:26px;background:var(--ink);color:#fff;padding:15px 24px;border-radius:3px;font-size:17px;box-shadow:0 10px 30px #102f4026;transition:background .3s,translate .3s,box-shadow .3s}
+.primary:after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,#ffffff40 50%,transparent 70%);translate:120% 0;animation:shine 4.5s 3s infinite}
+.primary:hover{background:var(--blue);translate:0 -2px;box-shadow:0 16px 36px #2559ad40}
+@keyframes shine{0%{translate:120% 0}22%,100%{translate:-120% 0}}
+.secondary{display:inline-flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding:10px 0;font-size:17px}
+.secondary svg{width:18px;height:18px;fill:#25d366}
+.location{margin-top:30px;font-size:14px;color:#6a7b8e;letter-spacing:.02em;opacity:0;animation:rise .8s 1.9s forwards}
+
+/* panel */
+.panel{position:relative;isolation:isolate;overflow:hidden;background:#143255;color:#fff;padding:52px 38px 30px;display:flex;flex-direction:column;justify-content:space-between}
+.blob{position:absolute;z-index:-3;border-radius:50%;filter:blur(60px);opacity:.75}
+.b1{width:420px;height:420px;background:#2d68b8;top:-120px;right:-140px;animation:drift1 16s ease-in-out infinite alternate}
+.b2{width:360px;height:360px;background:#1c4d85;bottom:-80px;left:-120px;animation:drift2 19s ease-in-out infinite alternate}
+.b3{width:260px;height:260px;background:#5d8fd0;top:45%;left:30%;opacity:.35;animation:drift1 22s ease-in-out infinite alternate-reverse}
+@keyframes drift1{to{transform:translate(-90px,140px) scale(1.15)}}
+@keyframes drift2{to{transform:translate(110px,-120px) scale(1.2)}}
+.grain{position:absolute;inset:0;z-index:-2;background-image:linear-gradient(#ffffff0a 1px,transparent 1px),linear-gradient(90deg,#ffffff0a 1px,transparent 1px);background-size:44px 44px;mask-image:linear-gradient(180deg,#000,transparent 85%);-webkit-mask-image:linear-gradient(180deg,#000,transparent 85%)}
+.check{position:absolute;z-index:-1;left:-6%;bottom:-4%;width:92%;height:auto;overflow:visible;pointer-events:none}
+.check path{fill:none;stroke:#e0333c;stroke-width:9;stroke-linecap:round;stroke-linejoin:round;opacity:.42;stroke-dasharray:900;stroke-dashoffset:900;animation:draw 1.8s cubic-bezier(.7,0,.2,1) .5s forwards;filter:drop-shadow(0 0 18px #ff3b4566)}
+.pspot{position:absolute;z-index:-1;width:380px;height:380px;border-radius:50%;left:var(--px,-999px);top:var(--py,-999px);translate:-50% -50%;background:radial-gradient(circle,#ffffff1c,transparent 65%);pointer-events:none}
+.panel-title{font-size:14px;letter-spacing:.06em;color:#cfe0f6;margin-bottom:40px;display:flex;align-items:center;gap:12px}
+.panel-title:before{content:'';width:28px;height:2px;background:var(--red)}
+.rows a{display:block;border-top:1px solid #e4effe33;padding:20px 4px;transition:padding .35s,background .35s;opacity:0;animation:slide .7s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(.9s + var(--i)*.1s)}
+.rows a:last-child{border-bottom:1px solid #e4effe33}
+@keyframes slide{from{opacity:0;translate:-24px 0}to{opacity:1;translate:0 0}}
+.row-head{display:grid;grid-template-columns:30px 1fr 22px;align-items:center;gap:14px}
+.row-head small{font-size:12px;color:#a9c4e8;font-variant-numeric:tabular-nums}
+.row-head span{font-size:25px;line-height:1.3}
+.row-head i{font-style:normal;font-size:20px;transition:translate .35s}
+.row-more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s ease}
+.row-more p{overflow:hidden;font-size:14px;line-height:1.6;color:#c9dbf2;padding-inline-start:44px}
+.rows a:hover,.rows a:focus-visible{background:#ffffff0d;padding-inline:14px}
+.rows a:hover i,.rows a:focus-visible i{translate:-6px 0}
+.rows a:hover .row-more,.rows a:focus-visible .row-more{grid-template-rows:1fr}
+.rows a:hover .row-more p,.rows a:focus-visible .row-more p{padding-top:8px}
+.panel-foot{font-size:14px;color:#c4d6ee;margin-top:36px}
+
+/* stats */
+.stats{position:relative;background:var(--ink);color:#fff;padding:54px 48px 50px;overflow:hidden}
+.stats:before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 85% 0,#2559ad55,transparent 55%),radial-gradient(ellipse at 10% 110%,#b5121b26,transparent 50%)}
+.stats-grid{position:relative;max-width:1240px;margin:auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.stat{padding:6px 30px;border-inline-start:1px solid #ffffff22;opacity:0;translate:0 16px;transition:opacity .7s,translate .7s}
+.stat:first-child{border:0}
+.stats.in .stat{opacity:1;translate:0 0}
+.stats.in .stat:nth-child(2){transition-delay:.1s}.stats.in .stat:nth-child(3){transition-delay:.2s}.stats.in .stat:nth-child(4){transition-delay:.3s}
+.num{font-family:var(--serif);font-size:clamp(46px,5vw,72px);line-height:1;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:4px}
+.num em{font-style:normal;font-size:.5em;color:#e0333c}
+.lbl{margin-top:10px;font-size:16px;color:#bcd0e8}
+.ai{position:relative;max-width:1240px;margin:42px auto 0;padding-top:30px;border-top:1px solid #ffffff1c;display:flex;align-items:center;gap:16px;font-size:20px}
+.ai b{font-weight:600;background:linear-gradient(90deg,#fff 0%,#9cc2f2 25%,#fff 50%,#9cc2f2 75%,#fff 100%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sheen 6s linear infinite}
+.ai .dot{width:10px;height:10px;border-radius:50%;background:#5fd38a;box-shadow:0 0 0 0 #5fd38a88;animation:pulse 2s infinite;flex:none}
+@keyframes sheen{to{background-position:-200% 0}}
+@keyframes pulse{70%{box-shadow:0 0 0 12px #5fd38a00}100%{box-shadow:0 0 0 0 #5fd38a00}}
+
+@media(max-width:1100px){.opening{grid-template-columns:minmax(0,1.6fr) minmax(290px,1fr)}.identity{padding:40px 30px}.panel{padding:40px 28px 26px}.row-head span{font-size:22px}.stat{padding:6px 20px}}
+@media(max-width:760px){
+ .topbar{padding:14px 20px}.topbar nav{gap:18px;font-size:15px}.tools .wa span,.tools .phone{display:none}
+ .opening{display:flex;flex-direction:column;min-height:0;max-height:none}
+ .identity{padding:38px 22px 40px}.logo{width:min(300px,82%)}.slogan{font-size:31px;margin-top:26px}.scope{font-size:16px}
+ .panel{padding:30px 22px 26px}.panel-title{margin-bottom:18px}.check{width:120%;left:-20%;opacity:.6}
+ .rows a{padding:16px 2px}.row-head span{font-size:20px}.row-more p{padding-inline-start:44px}
+ .stats{padding:40px 22px}.stats-grid{grid-template-columns:1fr 1fr;row-gap:30px}.stat{padding:4px 16px}.stat:nth-child(3){border:0}
+ .ai{font-size:17px;margin-top:32px}
+}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.slogan .w,.scope,.actions,.location,.rows a,.stat{opacity:1!important;translate:none!important}.slogan .mark path,.check path{stroke-dashoffset:0!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+ <nav aria-label="ניווט ראשי"><a href="index.html#about">המשרד</a><a href="index.html#partners">האנשים</a><a href="index.html#services">שירותים</a><a href="index.html#contact">יצירת קשר</a></nav>
+ <div class="tools">
+  <a class="phone" href="tel:+972732741700" dir="ltr">073-274-1700</a>
+  <a class="wa" href="https://wa.me/972545616662"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.3 0 .5l-.4.6-.3.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.1 1.2Z"/></svg><span>וואטסאפ</span></a>
+  <a href="en.html" lang="en">EN</a>
+ </div>
+</header>
+
+<main>
+<section class="opening">
+ <div class="identity" id="identity">
+  <div class="spot" aria-hidden="true"></div>
+  <div class="logo-wrap"><img class="logo" id="logo" src="../assets/logo-full.png" width="1125" height="825" alt="הלוגו של חגי ולנשטין ושות׳ רואי חשבון" fetchpriority="high"></div>
+  <h1 class="sr">חגי ולנשטין ושות׳ רואי חשבון</h1>
+  <p class="slogan"><span class="w" style="--i:0">רואי</span> <span class="w" style="--i:1">חשבון</span> <span class="w" style="--i:2">שתכירו</span> <span class="w" style="--i:3">בשם</span> <span class="w mark" style="--i:4">ובפנים<svg viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M4 13C45 6 110 4 196 10"/></svg></span></p>
+  <p class="scope">ביקורת וחשבונאות, מיסים, הנהלת חשבונות ושכר, עבודות כלכליות וליווי פיננסי. לחברות, לעצמאים, לשותפויות ולעמותות.</p>
+  <div class="actions">
+   <a class="primary" href="index.html#contact">קביעת שיחת היכרות <span aria-hidden="true">←</span></a>
+   <a class="secondary" href="https://wa.me/972545616662"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.3 0 .5l-.4.6-.3.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.1 1.2Z"/></svg>כתבו לנו בוואטסאפ</a>
+  </div>
+  <p class="location">פתח תקווה · קריית מלאכי</p>
+ </div>
+
+ <aside class="panel" id="panel" aria-label="מחלקות המשרד">
+  <span class="blob b1" aria-hidden="true"></span><span class="blob b2" aria-hidden="true"></span><span class="blob b3" aria-hidden="true"></span>
+  <span class="grain" aria-hidden="true"></span>
+  <span class="pspot" aria-hidden="true"></span>
+  <svg class="check" viewBox="0 0 400 300" aria-hidden="true"><path d="M20 170 L120 270 L390 20"/></svg>
+  <div>
+   <p class="panel-title">מחלקות המשרד</p>
+   <nav class="rows" aria-label="שירותים">
+    <a href="index.html#service-audit" style="--i:0"><div class="row-head"><small>01</small><span>ביקורת ודוחות</span><i aria-hidden="true">←</i></div><div class="row-more"><p>ביקורת ועריכת דוחות כספיים · ביקורת עמותות · חוות דעת · אישורים לבנקים</p></div></a>
+    <a href="index.html#service-bookkeeping" style="--i:1"><div class="row-head"><small>02</small><span>שוטף וייעוץ</span><i aria-hidden="true">←</i></div><div class="row-more"><p>הנהלת חשבונות · חשבות שכר · תקציב ותזרים מזומנים · ייעוץ מקצועי</p></div></a>
+    <a href="index.html#service-technology" style="--i:2"><div class="row-head"><small>03</small><span>עבודות מיוחדות</span><i aria-hidden="true">←</i></div><div class="row-more"><p>הערכות שווי · עבודות כלכליות · תקציב מול ביצוע · מודלים ואוטומציה מבוססי בינה מלאכותית</p></div></a>
+    <a href="index.html#service-tax" style="--i:3"><div class="row-head"><small>04</small><span>מיסים</span><i aria-hidden="true">←</i></div><div class="row-more"><p>ייעוץ ותכנון מס · דיוני שומות · מיסוי בינלאומי · שינויי מבנה</p></div></a>
+   </nav>
+  </div>
+  <p class="panel-foot">חברות · עצמאים · שותפויות · עמותות</p>
+ </aside>
+</section>
+
+<section class="stats" id="stats" aria-label="המשרד במספרים">
+ <div class="stats-grid">
+  <div class="stat"><div class="num"><span data-to="60">60</span><em>+</em></div><p class="lbl">שנות פעילות</p></div>
+  <div class="stat"><div class="num"><em>כ־</em><span data-to="30">30</span></div><p class="lbl">עובדים</p></div>
+  <div class="stat"><div class="num"><span data-to="2">2</span></div><p class="lbl">סניפים</p></div>
+  <div class="stat"><div class="num"><span data-to="22">22</span></div><p class="lbl">שירותים תחת קורת גג אחת</p></div>
+ </div>
+ <p class="ai"><span class="dot" aria-hidden="true"></span><span>משרד משפחתי ותיק, <b>עם כלי בינה מלאכותית ואוטומציות של היום.</b></span></p>
+</section>
+</main>
+
+<script>
+(() => {
+ const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const id = document.getElementById('identity'), logo = document.getElementById('logo'), panel = document.getElementById('panel');
+ if (!calm && matchMedia('(pointer:fine)').matches) {
+  id.addEventListener('pointermove', e => {
+   const r = id.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+   id.style.setProperty('--mx', x * 100 + '%'); id.style.setProperty('--my', y * 100 + '%');
+   logo.style.setProperty('--ry', ((x - .5) * 8).toFixed(2) + 'deg'); logo.style.setProperty('--rx', ((.5 - y) * 6).toFixed(2) + 'deg');
+  });
+  id.addEventListener('pointerleave', () => { logo.style.setProperty('--rx', '0deg'); logo.style.setProperty('--ry', '0deg'); });
+  panel.addEventListener('pointermove', e => { const r = panel.getBoundingClientRect(); panel.style.setProperty('--px', e.clientX - r.left + 'px'); panel.style.setProperty('--py', e.clientY - r.top + 'px'); });
+ }
+ const stats = document.getElementById('stats');
+ const run = () => {
+  stats.classList.add('in');
+  if (calm) return;
+  stats.querySelectorAll('[data-to]').forEach(el => {
+   const to = +el.dataset.to, t0 = performance.now(), d = 1400;
+   const step = t => { const p = Math.min(1, (t - t0) / d); el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); };
+   el.textContent = '0'; requestAnimationFrame(step);
+  });
+ };
+ if ('IntersectionObserver' in window) new IntersectionObserver((en, o) => { if (en[0].isIntersecting) { run(); o.disconnect(); } }, { threshold: .4 }).observe(stats); else run();
+})();
+</script>
+</body>
+</html>
